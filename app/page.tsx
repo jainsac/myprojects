@@ -62,8 +62,11 @@ export default function Home() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [loginPopup, setLoginPopup] = useState<any>(null);
   const [verificationOpen, setVerificationOpen] = useState(false);
+  const [freeVerificationFiles, setFreeVerificationFiles] = useState<Record<string, File | null>>({front:null,left:null,right:null});
+  const [freeVerificationStatus, setFreeVerificationStatus] = useState<"not_started"|"pending"|"verified">("not_started");
   const [mediaOpen, setMediaOpen] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
+  useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => {
     if(!user)return;
     registerChatPublicKey().catch(() => notify("Secure chat setup needs browser storage permission."));
@@ -161,6 +164,24 @@ export default function Home() {
     finally { setChatBusy(false); }
   }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
+
+  async function submitFreeVerification(){
+    const keys=["front","left","right"] as const;
+    if(keys.some(k=>!freeVerificationFiles[k])){notify("Please capture all 3 selfie angles");return;}
+    try{
+      const captures:any={};
+      for(const key of keys){
+        const file=freeVerificationFiles[key];
+        if(!file) continue;
+        const digest=await crypto.subtle.digest("SHA-256",await file.arrayBuffer());
+        captures[key]={hash:Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join(""),size:file.size,type:file.type};
+      }
+      localStorage.setItem("cuddl_free_verification",JSON.stringify({status:"pending",submittedAt:new Date().toISOString(),captures}));
+      setFreeVerificationStatus("pending");
+      setFreeVerificationFiles({front:null,left:null,right:null});
+      notify("Free verification submitted for review");
+    }catch{notify("Could not prepare verification");}
+  }
 
   function notify(message: string) {
     setToast(message);
@@ -281,7 +302,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>Verify identity</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => notify("Privacy controls opened")}>Manage privacy</button></div>
           <div className="grid">
             {[
@@ -297,13 +318,17 @@ export default function Home() {
       </main>
 
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Identity & authenticity</div><h2>Verified Cuddl profile</h2>
-        <p className="sub">For trust and safety, Cuddl requires your legal name, phone number, email and government ID. Identity checks use live selfie capture: front, left side and right side. Verification is handled through a dedicated verification provider; Cuddl should not store raw government-ID numbers or biometric templates unless legally required.</p>
-        <div className="verification-list"><div>✓ Legal name must match your government ID</div><div>✓ Phone and email must be verified</div><div>✓ Live front + left + right selfie capture</div><div>✓ Government ID authenticity and face match check</div><div>✓ Duplicate-account signals can trigger review/restriction</div></div>
-        <p className="safe">Important: AI verification is a safety signal, not an absolute guarantee of identity. False matches and false rejections are possible, so restricted users need a human-review/appeal path.</p>
-        <button className="btn" onClick={()=>notify("Verification flow will open when the identity provider is connected")}>Start verification</button>
+        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Build trust without a paid provider"}</h2>
+        <p className="sub">Cuddl can collect three live selfie captures using the device camera and keep only local verification metadata. This free mode does <b>not</b> perform government-ID authenticity or biometric face-match verification.</p>
+        <div className="verification-list">
+          {([["front","Front selfie","Look straight at the camera"],["left","Left selfie","Turn your face gently left"],["right","Right selfie","Turn your face gently right"]] as const).map(([key,label,hint])=><label className="safe" key={key}><b>{label}</b><span style={{display:"block",marginTop:4}}>{hint}</span><input type="file" accept="image/*" capture="user" onChange={e=>setFreeVerificationFiles(v=>({...v,[key]:e.target.files?.[0]||null}))} /></label>)}
+        </div>
+        <p className="safe">Privacy: the selfie files stay on this device in the current free mode; Cuddl stores only a local SHA-256 fingerprint and submission time. A future authorised provider can replace this step with real ID/liveness/face-match verification.</p>
+        <button className="btn" disabled={freeVerificationStatus==="pending"} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"Already submitted":"Submit free verification"}</button>
+        <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
         <button className="btn ghost" onClick={()=>setVerificationOpen(false)}>Close</button>
       </div></div>}
+
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Profile media rules</div><h2>Your photos & videos</h2>
         <p className="sub">Only media showing you may be added to your dating profile. Group photos, other people, screenshots, memes, downloaded images and misleading media are not permitted.</p>
