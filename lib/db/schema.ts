@@ -56,6 +56,48 @@ export const profiles = pgTable("profiles", {
   updatedAt: ts("updated_at"),
 });
 
+export const identityVerificationStatus = pgEnum("identity_verification_status", ["pending", "verified", "rejected", "restricted"]);
+export const mediaType = pgEnum("media_type", ["photo", "video"]);
+
+export const identityVerifications = pgTable("identity_verifications", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  legalName: text("legal_name").notNull(),
+  governmentIdType: text("government_id_type").notNull(),
+  governmentIdLast4: text("government_id_last4"),
+  selfieFrontUrl: text("selfie_front_url"),
+  selfieLeftUrl: text("selfie_left_url"),
+  selfieRightUrl: text("selfie_right_url"),
+  status: identityVerificationStatus("status").default("pending").notNull(),
+  provider: text("provider"),
+  providerReference: text("provider_reference"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const identitySignals = pgTable("identity_signals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  signalType: text("signal_type").notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  confidence: real("confidence"),
+  action: text("action").notNull(),
+  createdAt: ts("created_at"),
+});
+
+export const profileMedia = pgTable("profile_media", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: mediaType("type").notNull(),
+  storageKey: text("storage_key").notNull(),
+  thumbnailKey: text("thumbnail_key"),
+  position: integer("position").default(0).notNull(),
+  moderationStatus: text("moderation_status").default("pending").notNull(),
+  createdAt: ts("created_at"),
+}, (t) => ({
+  userPositionIdx: uniqueIndex("profile_media_user_position_idx").on(t.userId, t.position),
+}));
+
 export const interests = pgTable("interests", {
   id: uuid("id").defaultRandom().primaryKey(),
   slug: text("slug").notNull(),
