@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, database: "not_configured" }, { status: 503 });
     }
 
-    const client = sql(databaseUrl);
+    const client = neon(databaseUrl);
     const result = await client`select now() as now`;
 
     return NextResponse.json({
