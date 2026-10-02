@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Tab = "discover" | "lounge" | "matches" | "dates" | "profile";
 type Person = { name: string; age: number; city: string; initial: string; tags: string[]; score: number };
@@ -43,6 +43,15 @@ export default function Home() {
   const [liked, setLiked] = useState<Person[]>([people[1]]);
   const [toast, setToast] = useState("");
   const [city] = useState("Delhi");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [authMode, setAuthMode] = useState<"login"|"register">("login");
+  const [authForm, setAuthForm] = useState({displayName:"",email:"",password:"",city:"Delhi"});
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
+  async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
+  async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);notify("Signed out");}
   const person = useMemo(() => people[index % people.length], [index]);
 
   function notify(message: string) {
@@ -57,6 +66,9 @@ export default function Home() {
   }
 
   const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["profile","☺","Profile"]] as const;
+
+  if (!authChecked) return <div className="cuddl-app"><main className="content"><div className="panel"><b>Loading Cuddl…</b><p className="sub">Checking your secure session.</p></div></main></div>;
+  if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">Meet through activities, games, music and real conversations.</p><form className="panel auth-form" onSubmit={submitAuth}>{authMode==="register" && <input className="field" placeholder="Your name" value={authForm.displayName} onChange={e=>setAuthForm({...authForm,displayName:e.target.value})} required />}<input className="field" type="email" placeholder="Email address" value={authForm.email} onChange={e=>setAuthForm({...authForm,email:e.target.value})} required /><input className="field" type="password" minLength={8} placeholder="Password (8+ characters)" value={authForm.password} onChange={e=>setAuthForm({...authForm,password:e.target.value})} required />{authMode==="register" && <input className="field" placeholder="City" value={authForm.city} onChange={e=>setAuthForm({...authForm,city:e.target.value})} />}{authError && <div className="auth-error">{authError}</div>}<button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account"}</button></form><button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
 
   return (
     <div className="cuddl-app">
@@ -139,7 +151,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => notify("Verification flow started")}>Verify</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => notify("Verification flow started")}>Verify</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => notify("Privacy controls opened")}>Manage privacy</button></div>
           <div className="grid">
             {[
