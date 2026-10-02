@@ -17,6 +17,18 @@ export function verifyPassword(password:string,stored:string){const [salt,hex]=s
 export async function setSession(userId:string){(await cookies()).set(COOKIE,token(userId),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:60*60*24*30});}
 export async function clearSession(){(await cookies()).set(COOKIE,"",{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:0});}
 
+export function isAdmin(current: { user?: { isAdmin?: boolean | null; email?: string | null } } | null){
+  if(!current) return false;
+  if(current.user?.isAdmin) return true;
+  const allowed=(process.env.CUDDL_ADMIN_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+  return !!current.user?.email && allowed.includes(current.user.email.toLowerCase());
+}
+
+export async function requireAdmin(){
+  const current=await getCurrentUser();
+  return isAdmin(current) ? current : null;
+}
+
 export async function getCurrentUser(){
   const value=(await cookies()).get(COOKIE)?.value;
   const userId=value?verify(value):null;
