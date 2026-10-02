@@ -182,6 +182,14 @@ export const matches = pgTable("matches", {
   pairIdx: uniqueIndex("matches_pair_idx").on(t.userAId, t.userBId),
 }));
 
+export const encryptionPublicKeys = pgTable("encryption_public_keys", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  publicKeyJwk: jsonb("public_key_jwk").$type<Record<string, unknown>>().notNull(),
+  keyVersion: integer("key_version").default(1).notNull(),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
 export const messages = pgTable("messages", {
   id: uuid("id").defaultRandom().primaryKey(),
   matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
