@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { decryptChatMessage, encryptChatMessage, registerChatPublicKey } from "../lib/chat-crypto";
 
 type Tab = "discover" | "lounge" | "matches" | "dates" | "profile";
 type Person = { name: string; age: number; city: string; initial: string; tags: string[]; score: number };
@@ -65,6 +66,7 @@ export default function Home() {
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user)return;
+    registerChatPublicKey().catch(() => notify("Secure chat setup needs browser storage permission."));
     Promise.all([fetch("/api/discover"),fetch("/api/matches"),fetch("/api/festival"),fetch("/api/notifications")]).then(async ([a,m,f,n])=>{
       const [ad,md,fd,nd]=await Promise.all([a.json(),m.json(),f.json(),n.json()]);
       if(Array.isArray(ad.profiles))setDiscoverProfiles(ad.profiles);
@@ -81,9 +83,7 @@ export default function Home() {
     if(!user || !chatMatch?.matchId) return;
     const timer=window.setInterval(async()=>{
       try{
-        const r=await fetch("/api/messages?matchId="+encodeURIComponent(chatMatch.matchId),{cache:"no-store"});
-        const d=await r.json();
-        if(r.ok && Array.isArray(d.messages)) setChatMessages(d.messages);
+        try { await loadEncryptedChat(chatMatch.matchId); } catch {}
       }catch{}
     },4000);
     return ()=>window.clearInterval(timer);
@@ -114,30 +114,50 @@ export default function Home() {
   useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setChatMatch(null);notify("Signed out");}
+  async function loadEncryptedChat(matchId:string){
+    const r=await fetch("/api/messages?matchId="+encodeURIComponent(matchId),{cache:"no-store"});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||"Could not load chat");
+    const rows=Array.isArray(d.messages)?d.messages:[];
+    const decrypted=await Promise.all(rows.map(async (message:any)=>{
+      if(message.metadata?.encrypted!==true || !message.body || !message.senderPublicKey){
+        return {...message,body:message.metadata?.legacy ? "[Older message is not available in encrypted chat]" : ""};
+      }
+      try{
+        const body=await decryptChatMessage(message.body,message.metadata.iv,message.senderPublicKey);
+        return {...message,body};
+      }catch{
+        return {...message,body:"[Unable to decrypt this message on this device]"};
+      }
+    }));
+    setChatMessages(decrypted);
+  }
   async function openChat(match:any){
     if(!match?.matchId && !match?.id) return;
     const matchId=match.matchId||match.id;
-    setChatMatch({...match,matchId});
+    const otherId=match.otherUserId || (match.userAId===user?.user?.id ? match.userBId : match.userAId);
+    setChatMatch({...match,matchId,otherUserId:otherId});
     setChatMessages([]);
-    try {
-      const r=await fetch("/api/messages?matchId="+encodeURIComponent(matchId));
-      const d=await r.json();
-      if(r.ok) setChatMessages(Array.isArray(d.messages)?d.messages:[]);
-      else notify(d.error||"Could not load chat");
-    } catch { notify("Could not load chat"); }
+    try { await loadEncryptedChat(matchId); }
+    catch(err) { notify(err instanceof Error?err.message:"Could not load secure chat"); }
   }
   async function sendMessage(e?:React.FormEvent){
     e?.preventDefault();
     const text=chatText.trim();
-    if(!text || !chatMatch?.matchId || chatBusy) return;
+    if(!text || !chatMatch?.matchId || !chatMatch?.otherUserId || chatBusy) return;
     setChatBusy(true);
     try {
-      const r=await fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({matchId:chatMatch.matchId,body:text})});
+      const keyResponse=await fetch("/api/keys?userIds="+encodeURIComponent(chatMatch.otherUserId),{cache:"no-store"});
+      const keyData=await keyResponse.json();
+      const recipient=Array.isArray(keyData.keys)?keyData.keys[0]:null;
+      if(!recipient?.publicKeyJwk) throw new Error("Your match has not enabled secure chat on this device yet.");
+      const encrypted=await encryptChatMessage(text,recipient.publicKeyJwk);
+      const r=await fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({matchId:chatMatch.matchId,...encrypted})});
       const d=await r.json();
-      if(!r.ok) throw new Error(d.error||"Could not send message");
-      setChatMessages(current=>[...current,d.message]);
+      if(!r.ok) throw new Error(d.error||"Could not send encrypted message");
+      setChatMessages(current=>[...current,{...d.message,body:text}]);
       setChatText("");
-    } catch(err) { notify(err instanceof Error?err.message:"Could not send message"); }
+    } catch(err) { notify(err instanceof Error?err.message:"Could not send encrypted message"); }
     finally { setChatBusy(false); }
   }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
@@ -229,7 +249,7 @@ export default function Home() {
           <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
           {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked.map(p=>({...p,matchId:undefined}))).map((p:any) => <div className="panel" key={p.matchId||p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}{p.age ? ", "+p.age : ""} ✓</b><div className="sub">{p.city || "Cuddl"}{p.score ? " · "+p.score+"% compatibility" : " · mutual connection"}</div></div></div><div className="actions"><button className="btn" onClick={() => openChat(p)} disabled={!p.matchId}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
           {chatMatch && <div className="panel chat-panel">
-            <div className="profile-row"><button className="icon-btn" onClick={()=>setChatMatch(null)} aria-label="Close chat">‹</button><div className="avatar">{chatMatch.initial}</div><div className="grow"><b>{chatMatch.name}</b><div className="sub">Matched on Cuddl · private chat</div></div></div>
+            <div className="profile-row"><button className="icon-btn" onClick={()=>setChatMatch(null)} aria-label="Close chat">‹</button><div className="avatar">{chatMatch.initial}</div><div className="grow"><b>{chatMatch.name}</b><div className="sub">Matched on Cuddl · 🔒 end-to-end encrypted</div></div></div>
             <div className="chat-list">
               {chatMessages.length===0 && <div className="chat-empty">Start the conversation. Ask about a shared activity, song, game or place.</div>}
               {chatMessages.map(m=><div key={m.id} className={m.senderId===user?.user?.id||m.senderId===user?.id?"bubble mine":"bubble"}>{m.body}</div>)}
