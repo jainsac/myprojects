@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { decryptChatMessage, encryptChatMessage, registerChatPublicKey } from "../lib/chat-crypto";
 
 type Tab = "discover" | "lounge" | "matches" | "dates" | "profile";
@@ -64,6 +64,11 @@ export default function Home() {
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [freeVerificationFiles, setFreeVerificationFiles] = useState<Record<string, File | null>>({front:null,left:null,right:null});
   const [freeVerificationStatus, setFreeVerificationStatus] = useState<"not_started"|"pending"|"verified">("not_started");
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraAngle, setCameraAngle] = useState<"front"|"left"|"right">("front");
+  const [cameraBusy, setCameraBusy] = useState(false);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
@@ -164,6 +169,35 @@ export default function Home() {
     finally { setChatBusy(false); }
   }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
+
+  async function startFreeCamera(angle:"front"|"left"|"right"=cameraAngle){
+    if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){notify("Camera needs a secure HTTPS page and a supported browser");return;}
+    setCameraAngle(angle); setCameraBusy(true);
+    try{
+      cameraStream?.getTracks().forEach(t=>t.stop());
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false});
+      setCameraStream(stream);
+      setTimeout(()=>{if(cameraVideoRef.current){cameraVideoRef.current.srcObject=stream;cameraVideoRef.current.play().catch(()=>{});}},0);
+    }catch(err){notify(err instanceof DOMException && err.name==="NotAllowedError"?"Camera permission was denied":"Could not open camera");}
+    finally{setCameraBusy(false);}
+  }
+  function stopFreeCamera(){
+    cameraStream?.getTracks().forEach(t=>t.stop()); setCameraStream(null);
+    if(cameraVideoRef.current) cameraVideoRef.current.srcObject=null;
+  }
+  async function captureFreeCamera(){
+    const video=cameraVideoRef.current, canvas=cameraCanvasRef.current;
+    if(!video||!canvas||!cameraStream){notify("Start the camera first");return;}
+    canvas.width=video.videoWidth||720; canvas.height=video.videoHeight||720;
+    const ctx=canvas.getContext("2d"); if(!ctx){notify("Camera capture unavailable");return;}
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",0.88));
+    if(!blob){notify("Could not capture image");return;}
+    const file=new File([blob],`cuddl-${cameraAngle}.jpg`,{type:"image/jpeg"});
+    setFreeVerificationFiles(v=>({...v,[cameraAngle]:file})); stopFreeCamera();
+    if(cameraAngle==="front")setCameraAngle("left");else if(cameraAngle==="left")setCameraAngle("right");
+    notify(`${cameraAngle} selfie captured`);
+  }
 
   async function submitFreeVerification(){
     const keys=["front","left","right"] as const;
@@ -318,15 +352,19 @@ export default function Home() {
       </main>
 
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Build trust without a paid provider"}</h2>
-        <p className="sub">Cuddl can collect three live selfie captures using the device camera and keep only local verification metadata. This free mode does <b>not</b> perform government-ID authenticity or biometric face-match verification.</p>
-        <div className="verification-list">
-          {([["front","Front selfie","Look straight at the camera"],["left","Left selfie","Turn your face gently left"],["right","Right selfie","Turn your face gently right"]] as const).map(([key,label,hint])=><label className="safe" key={key}><b>{label}</b><span style={{display:"block",marginTop:4}}>{hint}</span><input type="file" accept="image/*" capture="user" onChange={e=>setFreeVerificationFiles(v=>({...v,[key]:e.target.files?.[0]||null}))} /></label>)}
+        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
+        <p className="sub">Capture three guided selfie angles. Free mode keeps the captured images on this device and does not perform government-ID authenticity or biometric matching.</p>
+        <div className="panel" style={{padding:12}}>
+          <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
+          {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
+          <canvas ref={cameraCanvasRef} style={{display:"none"}} />
+          <div className="actions">{!cameraStream?<button className="btn" disabled={cameraBusy} onClick={()=>startFreeCamera(cameraAngle)}>{cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera}>Stop camera</button>}</div>
         </div>
-        <p className="safe">Privacy: the selfie files stay on this device in the current free mode; Cuddl stores only a local SHA-256 fingerprint and submission time. A future authorised provider can replace this step with real ID/liveness/face-match verification.</p>
-        <button className="btn" disabled={freeVerificationStatus==="pending"} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"Already submitted":"Submit free verification"}</button>
+        <div className="verification-list">{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
+        <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
+        <button className="btn" disabled={freeVerificationStatus==="pending"||!freeVerificationFiles.front||!freeVerificationFiles.left||!freeVerificationFiles.right} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"Already submitted":"Submit free verification"}</button>
         <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
-        <button className="btn ghost" onClick={()=>setVerificationOpen(false)}>Close</button>
+        <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
       </div></div>}
 
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
