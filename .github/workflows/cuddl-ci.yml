@@ -18,5 +18,5 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Build
+      - name: Build application without database migration
         run: npm run build:app
