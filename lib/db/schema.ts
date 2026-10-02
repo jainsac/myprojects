@@ -20,6 +20,8 @@ export const roomType = pgEnum("room_type", ["activity", "game", "music", "socia
 export const roomRole = pgEnum("room_role", ["host", "participant", "spectator"]);
 export const requestStatus = pgEnum("request_status", ["pending", "accepted", "declined", "cancelled"]);
 export const reportStatus = pgEnum("report_status", ["open", "reviewing", "resolved", "dismissed"]);
+export const notificationAudience = pgEnum("notification_audience", ["all", "active", "city"]);
+
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -28,6 +30,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   passwordHash: text("password_hash"),
   status: accountStatus("status").default("active").notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 }, (t) => ({
@@ -227,6 +230,50 @@ export const blocks = pgTable("blocks", {
   createdAt: ts("created_at"),
 }, (t) => ({
   pk: primaryKey({ columns: [t.blockerId, t.blockedId] }),
+}));
+
+export const festivals = pgTable("festivals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  tagline: text("tagline"),
+  description: text("description"),
+  city: text("city"),
+  coverEmoji: text("cover_emoji").default("🎉").notNull(),
+  isLive: boolean("is_live").default(false).notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+}, (t) => ({
+  slugIdx: uniqueIndex("festivals_slug_idx").on(t.slug),
+}));
+
+export const festivalActivities = pgTable("festival_activities", {
+  festivalId: uuid("festival_id").notNull().references(() => festivals.id, { onDelete: "cascade" }),
+  activityId: uuid("activity_id").notNull().references(() => activities.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").default(0).notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.festivalId, t.activityId] }),
+}));
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  audience: notificationAudience("audience").default("all").notNull(),
+  city: text("city"),
+  showPopup: boolean("show_popup").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: ts("created_at"),
+});
+
+export const notificationReads = pgTable("notification_reads", {
+  notificationId: uuid("notification_id").notNull().references(() => notifications.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.notificationId, t.userId] }),
 }));
 
 export const cheers = pgTable("cheers", {
