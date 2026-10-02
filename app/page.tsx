@@ -40,7 +40,9 @@ const music = [
 export default function Home() {
   const [tab, setTab] = useState<Tab>("discover");
   const [index, setIndex] = useState(0);
-  const [liked, setLiked] = useState<Person[]>([people[1]]);
+  const [liked, setLiked] = useState<Person[]>([]);
+  const [discoverProfiles, setDiscoverProfiles] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
   const [toast, setToast] = useState("");
   const [city] = useState("Delhi");
   const [authChecked, setAuthChecked] = useState(false);
@@ -50,9 +52,10 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
+  useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);notify("Signed out");}
-  const person = useMemo(() => people[index % people.length], [index]);
+  const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
 
   function notify(message: string) {
     setToast(message);
@@ -87,10 +90,10 @@ export default function Home() {
             <div className="eyebrow">Daily Spark</div>
             <div className="profile-row">
               <div className="avatar">{person.initial}</div>
-              <div className="grow"><b>{person.name}, {person.age} ✓</b><div className="sub">⌖ {person.city} · Active today</div><div>{person.tags.map(t => <span className="tag" key={t}>{t}</span>)}</div></div>
+              <div className="grow"><b>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</b><div className="sub">⌖ {person.city} · Active today</div><div>{(person.tags ?? []).map((t:string) => <span className="tag" key={t}>{t}</span>)}</div></div>
               <span className="score">{person.score}%</span>
             </div>
-            <p className="sub">Looking for someone kind, curious and ready for real conversations.</p>
+            <p className="sub">{person.bio || "Looking for someone kind, curious and ready for real conversations."}</p>
             <div className="actions">
               <button className="btn ghost" onClick={() => { setIndex(i => i + 1); notify("Passed — suggestions tuned"); }}>Pass</button>
               <button className="btn" onClick={spark}>♥ Send Spark</button>
@@ -138,7 +141,7 @@ export default function Home() {
 
         {tab === "matches" && <>
           <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
-          {liked.map(p => <div className="panel" key={p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}, {p.age} ✓</b><div className="sub">{p.city} · {p.score}% compatibility</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Chat opened")}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
+          {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked).map(p => <div className="panel" key={p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}, {p.age} ✓</b><div className="sub">{p.city} · {p.score}% compatibility</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Chat opened")}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
           <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => notify("Opener suggestion created")}>Create opener</button></div>
         </>}
 
