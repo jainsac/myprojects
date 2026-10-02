@@ -60,6 +60,8 @@ export default function Home() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [loginPopup, setLoginPopup] = useState<any>(null);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user)return;
@@ -246,7 +248,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => notify("Verification flow started")}>Verify</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>Verify identity</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => notify("Privacy controls opened")}>Manage privacy</button></div>
           <div className="grid">
             {[
@@ -261,6 +263,22 @@ export default function Home() {
         </>}
       </main>
 
+      {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Identity & authenticity</div><h2>Verified Cuddl profile</h2>
+        <p className="sub">For trust and safety, Cuddl requires your legal name, phone number, email and government ID. Identity checks use live selfie capture: front, left side and right side. Verification is handled through a dedicated verification provider; Cuddl should not store raw government-ID numbers or biometric templates unless legally required.</p>
+        <div className="verification-list"><div>✓ Legal name must match your government ID</div><div>✓ Phone and email must be verified</div><div>✓ Live front + left + right selfie capture</div><div>✓ Government ID authenticity and face match check</div><div>✓ Duplicate-account signals can trigger review/restriction</div></div>
+        <p className="safe">Important: AI verification is a safety signal, not an absolute guarantee of identity. False matches and false rejections are possible, so restricted users need a human-review/appeal path.</p>
+        <button className="btn" onClick={()=>notify("Verification flow will open when the identity provider is connected")}>Start verification</button>
+        <button className="btn ghost" onClick={()=>setVerificationOpen(false)}>Close</button>
+      </div></div>}
+      {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Profile media rules</div><h2>Your photos & videos</h2>
+        <p className="sub">Only media showing you may be added to your dating profile. Group photos, other people, screenshots, memes, downloaded images and misleading media are not permitted.</p>
+        <div className="verification-list"><div>✓ Personal photos/videos only</div><div>✓ No group photos</div><div>✓ No impersonation or third-party media</div><div>✓ Uploads can be moderated before appearing</div><div>✓ Download controls will be enforced where the platform supports them</div></div>
+        <p className="safe">“Unlimited” profile media is a product policy, but storage and abuse controls still apply. We should not promise unlimited storage without defining fair-use, file-size and retention limits.</p>
+        <button className="btn" onClick={()=>notify("Media uploader will open when storage is connected")}>Add media</button>
+        <button className="btn ghost" onClick={()=>setMediaOpen(false)}>Close</button>
+      </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
         <div className="sheet-head"><div><div className="eyebrow">Special occasion · Live now</div><h2>{festival.festival.coverEmoji} {festival.festival.name}</h2><p className="sub">{festival.festival.description || "Move freely from one activity to another. This festival hub disappears when the admin switches it off."}</p></div><button className="icon-btn" onClick={()=>setFestivalOpen(false)}>×</button></div>
         <div className="festival-roam">{festival.activities.map((a:any)=><div className="festival-card" key={a.id}><div className="room-icon">✨</div><div className="grow"><b>{a.name}</b><div className="room-meta">{a.category}{a.city?" · "+a.city:""}{a.capacity?" · "+a.capacity+" spots":""}</div><div className="sub">{a.description || "Join, explore and meet people through this festival activity."}</div></div><button className="join" onClick={()=>notify("Entered "+a.name)}>Enter</button></div>)}</div>
