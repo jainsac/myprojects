@@ -55,7 +55,60 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatText, setChatText] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
+  const [festival, setFestival] = useState<any>(null);
+  const [festivalOpen, setFestivalOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [loginPopup, setLoginPopup] = useState<any>(null);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
+  useEffect(() => {
+    if(!user)return;
+    Promise.all([fetch("/api/discover"),fetch("/api/matches"),fetch("/api/festival"),fetch("/api/notifications")]).then(async ([a,m,f,n])=>{
+      const [ad,md,fd,nd]=await Promise.all([a.json(),m.json(),f.json(),n.json()]);
+      if(Array.isArray(ad.profiles))setDiscoverProfiles(ad.profiles);
+      if(Array.isArray(md.matches))setMatches(md.matches);
+      if(fd?.live) setFestival(fd); else {setFestival(null);setFestivalOpen(false);}
+      if(Array.isArray(nd.notifications)){
+        setNotifications(nd.notifications);
+        const popup=nd.notifications.find((x:any)=>x.showPopup&&!x.read);
+        if(popup) setLoginPopup(popup);
+      }
+    });
+  }, [user]);
+  useEffect(() => {
+    if(!user || !chatMatch?.matchId) return;
+    const timer=window.setInterval(async()=>{
+      try{
+        const r=await fetch("/api/messages?matchId="+encodeURIComponent(chatMatch.matchId),{cache:"no-store"});
+        const d=await r.json();
+        if(r.ok && Array.isArray(d.messages)) setChatMessages(d.messages);
+      }catch{}
+    },4000);
+    return ()=>window.clearInterval(timer);
+  }, [user, chatMatch?.matchId]);
+  async function markNotificationRead(id:string){
+    setNotifications(current=>current.map(n=>n.id===id?{...n,read:true}:n));
+    await fetch("/api/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+  }
+  async function openNotification(n:any){
+    await markNotificationRead(n.id);
+    setNotificationOpen(true);
+  }
+  async function closeLoginPopup(n:any){
+    await markNotificationRead(n.id);
+    setLoginPopup(null);
+  }
+  async function refreshFestival(){
+    const r=await fetch("/api/festival",{cache:"no-store"});
+    const d=await r.json();
+    if(d?.live) setFestival(d); else {setFestival(null);setFestivalOpen(false);}
+  }
+  async function openFestival(){
+    await refreshFestival();
+    setFestivalOpen(true);
+  }
+  useEffect(() => { if(!user)return; const t=window.setInterval(()=>{refreshFestival()},30000); return ()=>window.clearInterval(t); }, [user]);
+  useEffect(() => { if(!user)return; const t=window.setInterval(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});const d=await r.json();if(Array.isArray(d.notifications))setNotifications(d.notifications)},30000); return ()=>window.clearInterval(t); }, [user]);
   useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setChatMatch(null);notify("Signed out");}
@@ -111,6 +164,7 @@ export default function Home() {
       </header>
 
       <main className="content">
+        {festival && <button className="festival-banner" onClick={openFestival}><span>{festival.festival.coverEmoji}</span><div><b>{festival.festival.name} is live</b><small>{festival.festival.tagline || "Roam freely between special activities for a limited time."}</small></div><strong>Explore →</strong></button>}
         {tab === "discover" && <>
           <div className="eyebrow">Dating, but more alive</div>
           <h1 className="hero-title">Meet through moments, not just swipes.</h1>
@@ -207,6 +261,16 @@ export default function Home() {
         </>}
       </main>
 
+      {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
+        <div className="sheet-head"><div><div className="eyebrow">Special occasion · Live now</div><h2>{festival.festival.coverEmoji} {festival.festival.name}</h2><p className="sub">{festival.festival.description || "Move freely from one activity to another. This festival hub disappears when the admin switches it off."}</p></div><button className="icon-btn" onClick={()=>setFestivalOpen(false)}>×</button></div>
+        <div className="festival-roam">{festival.activities.map((a:any)=><div className="festival-card" key={a.id}><div className="room-icon">✨</div><div className="grow"><b>{a.name}</b><div className="room-meta">{a.category}{a.city?" · "+a.city:""}{a.capacity?" · "+a.capacity+" spots":""}</div><div className="sub">{a.description || "Join, explore and meet people through this festival activity."}</div></div><button className="join" onClick={()=>notify("Entered "+a.name)}>Enter</button></div>)}</div>
+        <div className="panel"><b>Roam freely</b><p className="sub">No permanent festival tab is kept in your account. When the event ends, this special hub disappears automatically.</p></div>
+      </div></div>}
+      {notificationOpen && <div className="overlay"><div className="notification-sheet">
+        <div className="sheet-head"><div><div className="eyebrow">Cuddl notifications</div><h2>Updates for you</h2></div><button className="icon-btn" onClick={()=>setNotificationOpen(false)}>×</button></div>
+        {notifications.length===0?<div className="panel"><p className="sub">No notifications yet.</p></div>:notifications.map(n=><button className={"notification-item "+(n.read?"read":"")} key={n.id} onClick={()=>openNotification(n)}><div><b>{n.title}</b><p>{n.body}</p><small>{n.read?"Read":"New"} · {new Date(n.publishedAt).toLocaleString()}</small></div>{!n.read&&<span>●</span>}</button>)}
+      </div></div>}
+      {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
         {nav.map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => setTab(id)}><span>{icon}</span>{label}</button>)}
       </nav>
