@@ -63,10 +63,12 @@ export default function Home() {
   const [loginPopup, setLoginPopup] = useState<any>(null);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<any>(null);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user)return;
     registerChatPublicKey().catch(() => notify("Secure chat setup needs browser storage permission."));
+    fetch("/api/verification",{cache:"no-store"}).then(r=>r.json()).then(d=>setVerificationStatus(d)).catch(()=>{});
     Promise.all([fetch("/api/discover"),fetch("/api/matches"),fetch("/api/festival"),fetch("/api/notifications")]).then(async ([a,m,f,n])=>{
       const [ad,md,fd,nd]=await Promise.all([a.json(),m.json(),f.json(),n.json()]);
       if(Array.isArray(ad.profiles))setDiscoverProfiles(ad.profiles);
@@ -301,7 +303,13 @@ export default function Home() {
         <p className="sub">For trust and safety, Cuddl requires your legal name, phone number, email and government ID. Identity checks use live selfie capture: front, left side and right side. Verification is handled through a dedicated verification provider; Cuddl should not store raw government-ID numbers or biometric templates unless legally required.</p>
         <div className="verification-list"><div>✓ Legal name must match your government ID</div><div>✓ Phone and email must be verified</div><div>✓ Live front + left + right selfie capture</div><div>✓ Government ID authenticity and face match check</div><div>✓ Duplicate-account signals can trigger review/restriction</div></div>
         <p className="safe">Important: AI verification is a safety signal, not an absolute guarantee of identity. False matches and false rejections are possible, so restricted users need a human-review/appeal path.</p>
-        <button className="btn" onClick={()=>notify("Verification flow will open when the identity provider is connected")}>Start verification</button>
+        <button className="btn" onClick={async()=>{
+          const r=await fetch("/api/verification",{method:"POST"});
+          const d=await r.json();
+          if(!r.ok){notify(d.error||"Verification is not configured");return;}
+          notify("Verification session created");
+        }}>{verificationStatus?.providerConfigured?"Start live verification":"Verification provider setup required"}</button>
+        <div className="safe">Status: <b>{verificationStatus?.status || "Loading…"}</b>{verificationStatus?.providerConfigured ? " · Provider connected" : " · No production verification provider is connected yet"}</div>
         <button className="btn ghost" onClick={()=>setVerificationOpen(false)}>Close</button>
       </div></div>}
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
