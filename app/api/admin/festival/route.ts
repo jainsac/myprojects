@@ -18,6 +18,17 @@ export async function POST(request:Request){
   if(!current) return NextResponse.json({error:"Admin access required."},{status:403});
   try{
     const body=await request.json();
+    if(body.action==="createActivity"){
+      const activityName=String(body.activityName||"").trim();
+      if(!activityName) return NextResponse.json({error:"Activity name is required."},{status:400});
+      const db=getDb();
+      const [activity]=await db.insert(activities).values({
+        name:activityName,category:String(body.category||"Festival").trim()||"Festival",
+        description:String(body.description||"").trim()||null,city:String(body.city||"").trim()||null,
+        capacity:body.capacity?Number(body.capacity):null,isPublic:true
+      }).returning();
+      return NextResponse.json({ok:true,activity});
+    }
     const name=String(body.name||"").trim(), slug=String(body.slug||name.toLowerCase().replace(/[^a-z0-9]+/g,"-")).trim();
     if(!name) return NextResponse.json({error:"Festival name is required."},{status:400});
     const db=getDb();
