@@ -5,16 +5,17 @@ export default function AdminPage(){
   const [festival,setFestival]=useState<any[]>([]);
   const [activities,setActivities]=useState<any[]>([]);
   const [notifications,setNotifications]=useState<any[]>([]);
+  const [verifications,setVerifications]=useState<any[]>([]);
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
   const [noteForm,setNoteForm]=useState({title:"",body:"",audience:"all",city:"Delhi",showPopup:true,publishNow:true});
 
   async function load(){
-    const [f,n]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications")]);
-    const fd=await f.json(), nd=await n.json();
-    if(!f.ok||!n.ok){setError(fd.error||nd.error||"Admin access required.");return;}
-    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);
+    const [f,n,v]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification")]);
+    const fd=await f.json(), nd=await n.json(), vd=await v.json();
+    if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
+    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);
   }
   useEffect(()=>{load()},[]);
 
@@ -36,6 +37,7 @@ export default function AdminPage(){
     const d=await r.json();if(!r.ok){setError(d.error||"Could not publish");return;}
     setNoteForm({title:"",body:"",audience:"all",city:"Delhi",showPopup:true,publishNow:true});load();
   }
+  async function decideVerification(userId:string,action:string){ const r=await fetch("/api/admin/verification",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId,action})}); const d=await r.json(); if(!r.ok){setError(d.error||"Could not update verification");return;} load(); }
   async function toggleNotification(id:string,isActive:boolean){
     await fetch("/api/admin/notifications",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,isActive:!isActive})});load();
   }
@@ -67,6 +69,11 @@ export default function AdminPage(){
         <button className="btn">Add activity</button>
       </form>
       <div className="sub">{activities.length} activity records available. New festivals currently attach all available activities; activity selection can be refined in the next admin iteration.</div>
+    </section>
+
+    <section className="panel"><div className="eyebrow">Identity verification</div><h2>Review camera captures</h2>
+      <p className="sub">Private verification images are only served through this admin session. Final decisions delete the three temporary captures.</p>
+      {verifications.length===0?<div className="safe">No verification records.</div>:verifications.map(v=><div className="admin-row" key={v.userId}><div className="grow"><b>{v.displayName||v.legalName} · {v.city||"Unknown city"}</b><div className="sub">{v.email||""} · {v.governmentIdType} •••• {v.governmentIdLast4} · <b>{v.status}</b></div>{v.selfieFrontUrl&&<div className="verification-media">{["front","left","right"].map((k,i)=><img key={k} src={`/api/admin/verification/media?pathname=${encodeURIComponent([v.selfieFrontUrl,v.selfieLeftUrl,v.selfieRightUrl][i])}`} alt={k+" verification capture"} style={{width:110,height:140,objectFit:"cover",borderRadius:12}}/> )}</div>}</div><div className="actions"><button className="btn" disabled={v.status!=="pending"} onClick={()=>decideVerification(v.userId,"verified")}>Verify</button><button className="btn ghost" disabled={v.status!=="pending"} onClick={()=>decideVerification(v.userId,"rejected")}>Reject</button><button className="btn ghost" disabled={v.status!=="pending"} onClick={()=>decideVerification(v.userId,"restricted")}>Restrict</button></div></div>)}
     </section>
 
     <section className="panel"><div className="eyebrow">User notifications</div><h2>Publish a notification</h2>
