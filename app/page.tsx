@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { decryptChatMessage, encryptChatMessage, registerChatPublicKey } from "../lib/chat-crypto";
+import { upload } from "@vercel/blob/client";
 
 type Tab = "discover" | "lounge" | "matches" | "dates" | "profile";
 type Person = { name: string; age: number; city: string; initial: string; tags: string[]; score: number };
@@ -210,10 +211,24 @@ export default function Home() {
         const digest=await crypto.subtle.digest("SHA-256",await file.arrayBuffer());
         captures[key]={hash:Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join(""),size:file.size,type:file.type};
       }
-      localStorage.setItem("cuddl_free_verification",JSON.stringify({status:"pending",submittedAt:new Date().toISOString(),captures}));
+      const uploaded:any={};
+      for(const key of keys){
+        const file=freeVerificationFiles[key];
+        if(!file) continue;
+        const blob=await upload(`verification/${user?.user?.id||user?.id}/${key}-${Date.now()}.jpg`,file,{
+          access:"private",
+          handleUploadUrl:"/api/verification/upload",
+          clientPayload:JSON.stringify({angle:key})
+        });
+        uploaded[key]={pathname:blob.pathname,hash:captures[key].hash,size:file.size,type:file.type};
+      }
+      const submit=await fetch("/api/verification/free",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({captures:uploaded})});
+      const result=await submit.json();
+      if(!submit.ok) throw new Error(result.error||"Could not submit verification");
+      localStorage.setItem("cuddl_free_verification",JSON.stringify({status:"pending",submittedAt:new Date().toISOString(),captures:Object.fromEntries(keys.map(k=>[k,{hash:captures[k].hash,size:captures[k].size,type:captures[k].type}]))}));
       setFreeVerificationStatus("pending");
       setFreeVerificationFiles({front:null,left:null,right:null});
-      notify("Free verification submitted for review");
+      notify("Verification captures securely uploaded and submitted");
     }catch{notify("Could not prepare verification");}
   }
 
@@ -353,7 +368,7 @@ export default function Home() {
 
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
-        <p className="sub">Capture three guided selfie angles. Free mode keeps the captured images on this device and does not perform government-ID authenticity or biometric matching.</p>
+        <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
         <div className="panel" style={{padding:12}}>
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
           {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
@@ -372,7 +387,7 @@ export default function Home() {
         <p className="sub">Only media showing you may be added to your dating profile. Group photos, other people, screenshots, memes, downloaded images and misleading media are not permitted.</p>
         <div className="verification-list"><div>✓ Personal photos/videos only</div><div>✓ No group photos</div><div>✓ No impersonation or third-party media</div><div>✓ Uploads can be moderated before appearing</div><div>✓ Download controls will be enforced where the platform supports them</div></div>
         <p className="safe">“Unlimited” profile media is a product policy, but storage and abuse controls still apply. We should not promise unlimited storage without defining fair-use, file-size and retention limits.</p>
-        <button className="btn" onClick={()=>notify("Media uploader will open when storage is connected")}>Add media</button>
+        <button className="btn" onClick={()=>notify("Profile media storage is planned separately from verification storage")}>Add media</button>
         <button className="btn ghost" onClick={()=>setMediaOpen(false)}>Close</button>
       </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
