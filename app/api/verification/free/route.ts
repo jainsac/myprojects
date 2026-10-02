@@ -25,7 +25,13 @@ export async function POST(request:Request){
     }]))};
     const db=getDb();
     await db.update(identityVerifications).set({
-      status:"pending",provider:"local-free-private",providerReference:JSON.stringify(submission),updatedAt:new Date()
+      status:"pending",
+      provider:"local-free-private",
+      providerReference:JSON.stringify(submission),
+      selfieFrontUrl:String(captures.front.pathname),
+      selfieLeftUrl:String(captures.left.pathname),
+      selfieRightUrl:String(captures.right.pathname),
+      updatedAt:new Date()
     }).where(eq(identityVerifications.userId,current.user.id));
     for(const key of KEYS){
       const item=captures[key];
