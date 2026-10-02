@@ -64,6 +64,8 @@ export default function Home() {
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<any>(null);
+  const [verificationFiles, setVerificationFiles] = useState<Record<string, File | null>>({front:null,left:null,right:null});
+  const [verificationSubmitting, setVerificationSubmitting] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user)return;
@@ -163,6 +165,29 @@ export default function Home() {
     finally { setChatBusy(false); }
   }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
+
+  async function submitFreeVerification(){
+    const captures = ["front","left","right"] as const;
+    if(captures.some(k=>!verificationFiles[k])){ notify("Please capture all 3 selfie angles first"); return; }
+    setVerificationSubmitting(true);
+    try{
+      const hashed:any={};
+      for(const key of captures){
+        const file=verificationFiles[key];
+        if(!file) continue;
+        const digest=await crypto.subtle.digest("SHA-256",await file.arrayBuffer());
+        const hash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+        hashed[key]={hash,size:file.size,type:file.type,name:file.name};
+      }
+      const r=await fetch("/api/verification",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"manual",captures:hashed})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||"Could not submit verification");
+      setVerificationStatus(d);
+      notify("Verification submitted for manual review");
+      setVerificationFiles({front:null,left:null,right:null});
+    }catch(err){ notify(err instanceof Error?err.message:"Could not submit verification"); }
+    finally{ setVerificationSubmitting(false); }
+  }
 
   function notify(message: string) {
     setToast(message);
@@ -303,13 +328,12 @@ export default function Home() {
         <p className="sub">For trust and safety, Cuddl requires your legal name, phone number, email and government ID. Identity checks use live selfie capture: front, left side and right side. Verification is handled through a dedicated verification provider; Cuddl should not store raw government-ID numbers or biometric templates unless legally required.</p>
         <div className="verification-list"><div>✓ Legal name must match your government ID</div><div>✓ Phone and email must be verified</div><div>✓ Live front + left + right selfie capture</div><div>✓ Government ID authenticity and face match check</div><div>✓ Duplicate-account signals can trigger review/restriction</div></div>
         <p className="safe">Important: AI verification is a safety signal, not an absolute guarantee of identity. False matches and false rejections are possible, so restricted users need a human-review/appeal path.</p>
-        <button className="btn" onClick={async()=>{
-          const r=await fetch("/api/verification",{method:"POST"});
-          const d=await r.json();
-          if(!r.ok){notify(d.error||"Verification is not configured");return;}
-          notify("Verification session created");
-        }}>{verificationStatus?.providerConfigured?"Start live verification":"Verification provider setup required"}</button>
-        <div className="safe">Status: <b>{verificationStatus?.status || "Loading…"}</b>{verificationStatus?.providerConfigured ? " · Provider connected" : " · No production verification provider is connected yet"}</div>
+        <div className="verification-list">
+          {([['front','Front selfie','Face looking straight at camera'],['left','Left-side selfie','Turn your face gently to the left'],['right','Right-side selfie','Turn your face gently to the right']] as const).map(([key,label,hint])=><label className="safe" key={key}><b>{label}</b><span style={{display:'block',marginTop:4}}>{hint}</span><input type="file" accept="image/*" capture="user" onChange={e=>setVerificationFiles(v=>({...v,[key]:e.target.files?.[0]||null}))} /></label>)}
+        </div>
+        <p className="safe">Free mode stores only a SHA-256 fingerprint and capture metadata; the actual selfie images are not uploaded or stored by Cuddl. This creates a verification submission for manual review, not an automatic identity guarantee.</p>
+        <button className="btn" disabled={verificationSubmitting} onClick={submitFreeVerification}>{verificationSubmitting?"Submitting…":"Submit free verification"}</button>
+        <div className="safe">Status: <b>{verificationStatus?.status || "Loading…"}</b> · Free/manual review mode</div>
         <button className="btn ghost" onClick={()=>setVerificationOpen(false)}>Close</button>
       </div></div>}
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
