@@ -49,7 +49,7 @@ export default function Home() {
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [authMode, setAuthMode] = useState<"login"|"register">("login");
-  const [authForm, setAuthForm] = useState({displayName:"",email:"",password:"",city:"Delhi"});
+  const [authForm, setAuthForm] = useState({displayName:"",legalName:"",phone:"",email:"",password:"",city:"Delhi",governmentIdType:"AADHAAR",governmentIdLast4:""});
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [chatMatch, setChatMatch] = useState<any>(null);
@@ -176,7 +176,20 @@ export default function Home() {
   const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["profile","☺","Profile"]] as const;
 
   if (!authChecked) return <div className="cuddl-app"><main className="content"><div className="panel"><b>Loading Cuddl…</b><p className="sub">Checking your secure session.</p></div></main></div>;
-  if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">Meet through activities, games, music and real conversations.</p><form className="panel auth-form" onSubmit={submitAuth}>{authMode==="register" && <input className="field" placeholder="Your name" value={authForm.displayName} onChange={e=>setAuthForm({...authForm,displayName:e.target.value})} required />}<input className="field" type="email" placeholder="Email address" value={authForm.email} onChange={e=>setAuthForm({...authForm,email:e.target.value})} required /><input className="field" type="password" minLength={8} placeholder="Password (8+ characters)" value={authForm.password} onChange={e=>setAuthForm({...authForm,password:e.target.value})} required />{authMode==="register" && <input className="field" placeholder="City" value={authForm.city} onChange={e=>setAuthForm({...authForm,city:e.target.value})} />}{authError && <div className="auth-error">{authError}</div>}<button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account"}</button></form><button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
+  if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">{authMode==="login"?"Meet through activities, games, music and real conversations.":"One real identity per person. Verification is required for trust and safety."}</p><form className="panel auth-form" onSubmit={submitAuth}>
+{authMode==="register" && <>
+<input className="field" placeholder="Profile name" value={authForm.displayName} onChange={e=>setAuthForm({...authForm,displayName:e.target.value})} required />
+<input className="field" placeholder="Full legal name (as on ID)" value={authForm.legalName} onChange={e=>setAuthForm({...authForm,legalName:e.target.value})} required autoComplete="name" />
+<input className="field" type="tel" placeholder="Phone number" value={authForm.phone} onChange={e=>setAuthForm({...authForm,phone:e.target.value})} required autoComplete="tel" />
+<input className="field" placeholder="City" value={authForm.city} onChange={e=>setAuthForm({...authForm,city:e.target.value})} required />
+<div className="profile-row"><select className="field" value={authForm.governmentIdType} onChange={e=>setAuthForm({...authForm,governmentIdType:e.target.value})} aria-label="Government ID type"><option value="AADHAAR">Aadhaar</option><option value="PAN">PAN</option><option value="PASSPORT">Passport</option><option value="DRIVING_LICENSE">Driving licence</option><option value="VOTER_ID">Voter ID</option><option value="OTHER">Other government ID</option></select><input className="field" inputMode="numeric" maxLength={4} placeholder="ID last 4 digits" value={authForm.governmentIdLast4} onChange={e=>setAuthForm({...authForm,governmentIdLast4:e.target.value.replace(/\\D/g,"").slice(0,4)})} required /></div>
+<div className="safe">🔐 Cuddl should send the complete ID and live front/left/right selfie capture only to the configured identity-verification provider. The app database stores only the minimum verification metadata needed for the account.</div>
+</>}
+<input className="field" type="email" placeholder="Email address" value={authForm.email} onChange={e=>setAuthForm({...authForm,email:e.target.value})} required autoComplete="email" />
+<input className="field" type="password" minLength={8} placeholder="Password (8+ characters)" value={authForm.password} onChange={e=>setAuthForm({...authForm,password:e.target.value})} required autoComplete={authMode==="login"?"current-password":"new-password"} />
+{authError && <div className="auth-error">{authError}</div>}
+{authMode==="register" && <div className="safe">Identity status starts as <b>Pending</b>. Account access should remain limited until the verification provider confirms the required live selfie and government-ID checks.</div>}
+<button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account & verify"}</button></form><button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
 
   return (
     <div className="cuddl-app">
