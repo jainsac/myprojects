@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../lib/db";
-import { users, profiles } from "../../../../lib/db/schema";
+import { users, profiles, identityVerifications } from "../../../../lib/db/schema";
 import { hashPassword, setSession } from "../../../../lib/auth";
+
+const emailPattern=/^\S+@\S+\.\S+$/;
+const phonePattern=/^[+]?\d{10,15}$/;
 
 export async function POST(request:Request){
   try{
@@ -10,15 +13,49 @@ export async function POST(request:Request){
     const email=String(body.email||"").trim().toLowerCase();
     const password=String(body.password||"");
     const displayName=String(body.displayName||"").trim();
+    const legalName=String(body.legalName||"").trim();
+    const phone=String(body.phone||"").replace(/[\s()-]/g,"");
     const city=String(body.city||"Delhi").trim();
-    if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<8||!displayName)return NextResponse.json({error:"Name, valid email and password (8+ characters) are required."},{status:400});
+    const governmentIdType=String(body.governmentIdType||"").trim().toUpperCase();
+    const governmentIdLast4=String(body.governmentIdLast4||"").replace(/\D/g,"").slice(-4);
+
+    if(!emailPattern.test(email)||password.length<8||!displayName||!legalName||!phonePattern.test(phone)){
+      return NextResponse.json({error:"Display name, legal name, valid phone, email and password (8+ characters) are required."},{status:400});
+    }
+    if(!["AADHAAR","PAN","PASSPORT","DRIVING_LICENSE","VOTER_ID","OTHER"].includes(governmentIdType) || governmentIdLast4.length!==4){
+      return NextResponse.json({error:"Government ID type and its last 4 digits are required."},{status:400});
+    }
+
     const db=getDb();
     const existing=await db.select({id:users.id}).from(users).where(eq(users.email,email)).limit(1);
     if(existing.length)return NextResponse.json({error:"An account with this email already exists."},{status:409});
-    const created=await db.insert(users).values({authUserId:`local:${email}`,email,passwordHash:hashPassword(password)}).returning({id:users.id});
+
+    const created=await db.insert(users).values({
+      authUserId:`local:${email}`,
+      email,
+      phone,
+      passwordHash:hashPassword(password),
+    }).returning({id:users.id});
     const id=created[0].id;
+
     await db.insert(profiles).values({userId:id,displayName,city});
+    await db.insert(identityVerifications).values({
+      userId:id,
+      legalName,
+      governmentIdType,
+      governmentIdLast4,
+      status:"pending",
+      provider:process.env.IDENTITY_PROVIDER_NAME || null,
+    });
+
     await setSession(id);
-    return NextResponse.json({ok:true,userId:id});
-  }catch(error){console.error(error);return NextResponse.json({error:"Registration failed."},{status:500});}
+    return NextResponse.json({
+      ok:true,
+      userId:id,
+      verification:{status:"pending",required:["government_id","live_selfie_front","live_selfie_left","live_selfie_right"]},
+    });
+  }catch(error){
+    console.error(error);
+    return NextResponse.json({error:"Registration failed."},{status:500});
+  }
 }
