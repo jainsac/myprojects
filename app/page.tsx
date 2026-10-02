@@ -51,10 +51,40 @@ export default function Home() {
   const [authForm, setAuthForm] = useState({displayName:"",email:"",password:"",city:"Delhi"});
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [chatMatch, setChatMatch] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatText, setChatText] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
-  async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);notify("Signed out");}
+  async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setChatMatch(null);notify("Signed out");}
+  async function openChat(match:any){
+    if(!match?.matchId && !match?.id) return;
+    const matchId=match.matchId||match.id;
+    setChatMatch({...match,matchId});
+    setChatMessages([]);
+    try {
+      const r=await fetch("/api/messages?matchId="+encodeURIComponent(matchId));
+      const d=await r.json();
+      if(r.ok) setChatMessages(Array.isArray(d.messages)?d.messages:[]);
+      else notify(d.error||"Could not load chat");
+    } catch { notify("Could not load chat"); }
+  }
+  async function sendMessage(e?:React.FormEvent){
+    e?.preventDefault();
+    const text=chatText.trim();
+    if(!text || !chatMatch?.matchId || chatBusy) return;
+    setChatBusy(true);
+    try {
+      const r=await fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({matchId:chatMatch.matchId,body:text})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||"Could not send message");
+      setChatMessages(current=>[...current,d.message]);
+      setChatText("");
+    } catch(err) { notify(err instanceof Error?err.message:"Could not send message"); }
+    finally { setChatBusy(false); }
+  }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
 
   function notify(message: string) {
@@ -141,7 +171,15 @@ export default function Home() {
 
         {tab === "matches" && <>
           <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
-          {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked).map(p => <div className="panel" key={p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}, {p.age} ✓</b><div className="sub">{p.city} · {p.score}% compatibility</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Chat opened")}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
+          {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked).map(p => <div className="panel" key={p.matchId||p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}{p.age ? ", "+p.age : ""} ✓</b><div className="sub">{p.city || "Cuddl"}{p.score ? " · "+p.score+"% compatibility" : " · mutual connection"}</div></div></div><div className="actions"><button className="btn" onClick={() => openChat(p)}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
+          {chatMatch && <div className="panel chat-panel">
+            <div className="profile-row"><button className="icon-btn" onClick={()=>setChatMatch(null)} aria-label="Close chat">‹</button><div className="avatar">{chatMatch.initial}</div><div className="grow"><b>{chatMatch.name}</b><div className="sub">Matched on Cuddl · private chat</div></div></div>
+            <div className="chat-list">
+              {chatMessages.length===0 && <div className="chat-empty">Start the conversation. Ask about a shared activity, song, game or place.</div>}
+              {chatMessages.map(m=><div key={m.id} className={m.senderId===user?.user?.id||m.senderId===user?.id?"bubble mine":"bubble"}>{m.body}</div>)}
+            </div>
+            <form className="chat-compose" onSubmit={sendMessage}><input className="field" value={chatText} onChange={e=>setChatText(e.target.value)} maxLength={2000} placeholder="Write a message…" /><button className="btn" disabled={chatBusy||!chatText.trim()}>{chatBusy?"…":"Send"}</button></form>
+          </div>}
           <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => notify("Opener suggestion created")}>Create opener</button></div>
         </>}
 
