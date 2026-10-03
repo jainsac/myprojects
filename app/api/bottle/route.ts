@@ -37,6 +37,7 @@ export async function POST(request:Request){
   const receiver=(row as any).rows?.[0]?.id;
   if(!receiver)return NextResponse.json({error:"No eligible bottle recipient is available right now."},{status:409});
   const created=await db.execute(sql\`INSERT INTO bottles(sender_id,receiver_id,content_text,media,status,expires_at) VALUES(\${current.user.id},\${receiver},\${text||null},\${JSON.stringify(media)}::jsonb,'ACTIVE',now()+make_interval(days=>\${Number(s?.open_timeout_days||30)})) RETURNING id,status,created_at,expires_at\`);
+  await db.execute(sql`INSERT INTO notifications(title,body,audience,target_user_id,show_popup,is_active,published_at) VALUES('🌊 You found a Cuddl bottle','Someone sent you a Message in a Bottle. Open it to discover their story.','all',${receiver},false,true,now())`);
   return NextResponse.json({ok:true,bottle:(created as any).rows?.[0]});
 }
 export async function PATCH(request:Request){
