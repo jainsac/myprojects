@@ -99,9 +99,14 @@
 .showcase-upload{position:relative;min-height:112px;border:1px dashed #e7c9ce;border-radius:17px;background:#fff8f9;padding:12px;text-align:left;color:var(--ink);display:flex;flex-direction:column;gap:4px;overflow:hidden}
 .showcase-upload span{font-size:22px}.showcase-upload b{font-size:12px}.showcase-upload small{font-size:10px;color:var(--muted);line-height:1.3}
 .showcase-upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.showcase-preview-list{display:grid;gap:7px;margin:8px 0}
-.showcase-preview{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:14px;background:#fff}
-.showcase-preview b{font-size:11px}.showcase-preview span{font-size:10px;color:var(--muted);flex:1}
+.showcase-preview-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+.showcase-preview{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:8px;padding:7px;border:1px solid var(--line);border-radius:14px;background:#fff;min-width:0}
+.showcase-thumb{width:58px;height:58px;border-radius:11px;overflow:hidden;background:#fff3f5;display:flex;align-items:center;justify-content:center;flex:none}
+.showcase-thumb img,.showcase-thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.showcase-audio-thumb{font-size:25px}
+.showcase-preview-copy{min-width:0;display:grid;gap:2px}
+.showcase-preview b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.showcase-preview span{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.showcase-preview .chip{padding:6px 8px;font-size:9px}
 .showcase-card{margin:9px 0;border:1px solid var(--line);border-radius:18px;background:#fff8f9;overflow:hidden}
 .showcase-card img,.showcase-card video{width:100%;max-height:360px;object-fit:cover;display:block}
 .showcase-card audio{width:calc(100% - 20px);margin:10px}
@@ -199,4 +204,10 @@
   .profile-extended-grid,.profile-row{display:flex;flex-direction:column}
 }
 
-/* Vercel production deployment trigger — mobile profile editor */
+@media(max-width:600px){
+  .showcase-preview-list{grid-template-columns:1fr}
+  .showcase-preview{grid-template-columns:62px 1fr auto}
+  .showcase-thumb{width:62px;height:62px}
+}
+
+/* Vercel production deployment trigger — profile media fixes */
