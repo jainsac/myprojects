@@ -15,7 +15,32 @@ const testProfiles = [
   { id:"88888888-8888-4888-8888-888888888888", displayName:"Ishita", age:25, city:"Noida", bio:"Sketching, books and discovering hidden cafés.", tags:["Art","Books","Coffee"], score:86, gender:"FEMALE", photos:[28,30,33,34], company:"TCS", profession:"Architect", religion:"Hindu", community:"Brahmin" },
 ];
 
-function testPhotoUrls(ids:number[]){ return ids.map(id=>`https://i.pravatar.cc/900?img=${id}`); }
+function testPhotoUrls(name:string,ids:number[]){
+  return ids.map((id,index)=>{
+    const palettes=[
+      ["#ffd8df","#f28b9a","#5b3540","#2a1e22"],
+      ["#ffe0c7","#e79b72","#3f2c2a","#21191a"],
+      ["#d9e9ff","#8bb5ea","#3b3b52","#1d1d2b"],
+      ["#eadcff","#b49be7","#4a365f","#211a29"],
+    ];
+    const [bg,skin,hair,shirt]=palettes[(id+index)%palettes.length];
+    const initial=name.slice(0,1).toUpperCase();
+    const tilt=[-3,2,-1,3][index%4];
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+      <defs><linearGradient id="g${id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg}"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>
+      <rect width="900" height="1100" fill="url(#g${id})"/>
+      <circle cx="450" cy="370" r="185" fill="${skin}"/>
+      <path d="M265 350c18-175 125-235 235-220 122 16 169 104 135 247-44-74-96-109-175-109-78 0-141 34-195 82z" fill="${hair}"/>
+      <ellipse cx="385" cy="390" rx="13" ry="18" fill="#171316"/><ellipse cx="515" cy="390" rx="13" ry="18" fill="#171316"/>
+      <path d="M410 470q40 24 80 0" fill="none" stroke="#6d4047" stroke-width="10" stroke-linecap="round"/>
+      <path d="M205 1100c16-235 117-350 245-350s229 115 245 350" fill="${shirt}"/>
+      <circle cx="450" cy="960" r="72" fill="rgba(255,255,255,.12)"/>
+      <text x="450" y="986" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="800" fill="rgba(255,255,255,.88)">${initial}</text>
+      <text x="450" y="1060" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="rgba(255,255,255,.82)">Cuddl test portrait ${index+1}</text>
+    </svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  });
+}
 
 export async function GET() {
   const current = await getCurrentUser();
@@ -42,10 +67,10 @@ export async function GET() {
 
   const test = testProfiles.map(p => ({
     id:p.id, displayName:p.displayName, age:p.age, city:p.city, bio:p.bio,
-    avatarUrl:testPhotoUrls(p.photos)[0],
+    avatarUrl:testPhotoUrls(p.displayName,p.photos)[0],
     tags:p.tags, score:p.score, isTestProfile:true,
     lifestylePreferences:{
-      gender:p.gender, photos:testPhotoUrls(p.photos), company:p.company,
+      gender:p.gender, photos:testPhotoUrls(p.displayName,p.photos), company:p.company,
       profession:p.profession, religion:p.religion, community:p.community,
     },
   }));
