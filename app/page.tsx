@@ -206,7 +206,7 @@ export default function Home() {
   async function openBottleCenter(){setBottleOpen(true);await loadBottle();}
   async function addBottleMedia(file:File,kind:"photo"|"video"){
     const max=kind==="photo"?5*1024*1024:50*1024*1024;
-    if(file.size>max){notify(`Keep ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
+    if(file.size>max){notify(`Keep ${kind} under ${kind==="photo"?"5MB":"50MB"}`);return;}
     setBottleBusy(true);
     try{
       const blob=await upload(`profile-media/${user?.user?.id||user?.id}/bottle-${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"")}`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload()});
@@ -247,7 +247,7 @@ export default function Home() {
   async function uploadPromptMedia(file:File, group:"personality"|"partner", index:number, kind:"photo"|"video"){
     if(!user?.user?.id && !user?.id)return;
     const max=kind==="photo"?5*1024*1024:50*1024*1024;
-    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
+    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"50MB"}`);return;}
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||"webm").toLowerCase();
@@ -329,7 +329,7 @@ export default function Home() {
   async function uploadProfileShowcase(file:File, kind:"photo"|"voice"|"video"){
     if(!user?.user?.id && !user?.id)return;
     const max=kind==="photo"?5*1024*1024:50*1024*1024;
-    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
+    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"50MB"}`);return;}
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||({photo:"jpg",voice:"webm",video:"webm"} as any)[kind]).toLowerCase();
@@ -981,7 +981,7 @@ export default function Home() {
                 <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"personality",i,"video");e.currentTarget.value=""}} /></label>
                 <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("personality",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
               </div>
-              {Array.isArray(media)&&media.length>0&&<div className="media-thumb-grid">{media.map((m:any,j:number)=>{const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";return <div className="media-thumb-card" key={m.pathname||j}>{m.kind==="photo"&&src?<img src={src} alt=""/>:m.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:<div className="media-thumb-icon">{m.kind==="voice"?"🎙️":"•"}</div>}<button type="button" className="media-thumb-remove" aria-label="Remove media" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>×</button></div>})}</div>})}</div>}
+              {Array.isArray(media)&&media.length>0&&<div className="media-thumb-grid">{media.map((m:any,j:number)=>{const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";return <div className="media-thumb-card" key={m.pathname||j}>{m.kind==="photo"&&src?<img src={src} alt=""/>:m.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:<div className="media-thumb-icon">{m.kind==="voice"?"🎙️":"•"}</div>}<button type="button" className="media-thumb-remove" aria-label="Remove media" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>×</button></div>})}</div>}
             </div>
           })}
           <div className="filter-section-title">🎨 Profile-wide Personality Showcase</div>
