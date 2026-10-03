@@ -377,16 +377,16 @@ export default function Home() {
       </main>
 
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
+        <div className="eyebrow">Identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
         <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
-        <div className="panel" style={{padding:12}}>
+        <div className="panel" style={{padding:12,display:freeVerificationStatus==="pending"?"none":"block"}}>
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
           {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
           <canvas ref={cameraCanvasRef} style={{display:"none"}} />
-          <div className="actions">{!cameraStream?<button className="btn" disabled={freeVerificationStatus==="pending"||cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{freeVerificationStatus==="pending"?"Verification submitted ✓":allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Stop camera</button>}</div>
+          <div className="actions">{!cameraStream?<button className="btn" disabled={cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={allFreeVerificationCaptured}>Stop camera</button>}</div>
         </div>
-        <div className="verification-list">{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
-        <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
+        <div className="verification-list" style={{display:freeVerificationStatus==="pending"?"none":"grid"}}>{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
+        <p className="safe" style={{display:freeVerificationStatus==="pending"?"none":"block"}}>Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
         <button className="btn" disabled={freeVerificationStatus==="pending"||!allFreeVerificationCaptured||verificationSubmitting} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"VERIFICATION SUBMITTED":verificationSubmitting?"SUBMITTING…":"SUBMIT VERIFICATION"}</button>
         <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
         <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
