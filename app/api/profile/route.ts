@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/auth";
 import { getDb } from "../../../lib/db";
+import { ensureRewardsSchema } from "../../../lib/rewards";
 import { profiles } from "../../../lib/db/schema";
 
 const genders = ["MALE","FEMALE","NON_BINARY","OTHER"];
@@ -63,6 +64,25 @@ export async function PUT(request:Request){
       lifestylePreferences,
       updatedAt:new Date(),
     }).where(eq(profiles.userId,current.user.id)).returning();
+    try{
+      const complete=!!profile.displayName && !!profile.city && !!(lifestylePreferences as any).state && !!(lifestylePreferences as any).gender && !!(lifestylePreferences as any).desiredGender && String(profile.bio||"").trim().length>=10 && !!(lifestylePreferences as any).maritalStatus;
+      if(complete){
+        await ensureRewardsSchema();
+        const settings=await db.execute((await import("drizzle-orm")).sql`SELECT qualification_event,reward_type,reward_value,max_rewards_per_user,enabled FROM referral_settings WHERE id=1`);
+        const s=(settings as any).rows?.[0];
+        if(s?.enabled && s.qualification_event==="PROFILE_COMPLETE"){
+          const pending=await db.execute((await import("drizzle-orm")).sql`SELECT r.id,r.referrer_id,s.reward_type,s.reward_value,s.max_rewards_per_user FROM referrals r CROSS JOIN referral_settings s WHERE r.referred_id=${current.user.id} AND r.status='PENDING' AND s.id=1 LIMIT 1`);
+          const x=(pending as any).rows?.[0];
+          if(x){
+            const count=await db.execute((await import("drizzle-orm")).sql`SELECT COUNT(*)::int AS count FROM reward_ledger WHERE user_id=${x.referrer_id} AND source_type='REFERRAL' AND status='CREDITED'`);
+            if(Number((count as any).rows?.[0]?.count||0)<Number(x.max_rewards_per_user)){
+              await db.execute((await import("drizzle-orm")).sql`UPDATE referrals SET status='REWARDED',qualification_event='PROFILE_COMPLETE',qualified_at=now() WHERE id=${x.id}`);
+              await db.execute((await import("drizzle-orm")).sql`INSERT INTO reward_ledger(user_id,source_type,source_id,reward_type,reward_value,status) VALUES(${x.referrer_id},'REFERRAL',${x.id},${x.reward_type},${JSON.stringify(x.reward_value||{})}::jsonb,'CREDITED')`);
+            }
+          }
+        }
+      }
+    }catch(rewardError){console.error("Referral qualification error",rewardError);}
     return NextResponse.json({ok:true,profile});
   }catch(error){console.error(error);return NextResponse.json({error:"Profile update failed."},{status:500});}
 }
