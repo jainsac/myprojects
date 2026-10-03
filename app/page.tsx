@@ -209,7 +209,7 @@ export default function Home() {
     if(file.size>max){notify(`Keep ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
     setBottleBusy(true);
     try{
-      const blob=await upload(`profile-media/${user?.user?.id||user?.id}/bottle-${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"")}`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload"});
+      const blob=await upload(`profile-media/${user?.user?.id||user?.id}/bottle-${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"")}`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload()});
       setBottleMedia(m=>[...m,{kind,pathname:blob.pathname}]);
     }catch(e){notify(e instanceof Error?e.message:"Could not upload bottle media");}finally{setBottleBusy(false);}
   }
@@ -246,14 +246,14 @@ export default function Home() {
 
   async function uploadPromptMedia(file:File, group:"personality"|"partner", index:number, kind:"photo"|"video"){
     if(!user?.user?.id && !user?.id)return;
-    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    const max=kind==="photo"?5*1024*1024:50*1024*1024;
     if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||"webm").toLowerCase();
       const blob=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-${kind}-${Date.now()}.${ext}`,file,{
         access:"private",
-        handleUploadUrl:"/api/profile/media/upload",
+        handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload(),
         contentType:file.type,
         multipart:kind==="video" && file.size>4*1024*1024
       });
@@ -287,7 +287,7 @@ export default function Home() {
         try{
           setShowcaseBusy(true);
           const ext="webm";
-          const blobResult=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-voice-${Date.now()}.${ext}`,new File([blob],`cuddl-prompt-voice-${Date.now()}.webm`,{type:mime}),{access:"private",handleUploadUrl:"/api/profile/media/upload"});
+          const blobResult=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-voice-${Date.now()}.${ext}`,new File([blob],`cuddl-prompt-voice-${Date.now()}.webm`,{type:mime}),{access:"private",handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload()});
           setProfileDraft((d:any)=>{
             const key=group==="personality"?"personalityPrompts":"partnerPrompts";
             const arr=[...(d[key]||[])];
@@ -320,16 +320,22 @@ export default function Home() {
     setPromptRecordingTarget(null);
   }
 
+  async function getUploadClientPayload(){
+    const r=await fetch("/api/profile/media/upload",{cache:"no-store"});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||"Could not authorize media upload");
+    return String(d.clientPayload||"");
+  }
   async function uploadProfileShowcase(file:File, kind:"photo"|"voice"|"video"){
     if(!user?.user?.id && !user?.id)return;
-    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    const max=kind==="photo"?5*1024*1024:50*1024*1024;
     if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||({photo:"jpg",voice:"webm",video:"webm"} as any)[kind]).toLowerCase();
       const blob=await upload(`profile-media/${user?.user?.id||user?.id}/${kind}-${Date.now()}.${ext}`,file,{
         access:"private",
-        handleUploadUrl:"/api/profile/media/upload"
+        handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload()
       });
       const item={kind,pathname:blob.pathname,prompt:kind==="photo"?"📸 My photo":kind==="voice"?"🎙️ My voice":"🎥 My vibe"};
       setProfileDraft((d:any)=>{
@@ -605,7 +611,15 @@ export default function Home() {
     notify("Spark sent 💗");
   }
 
-  const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"],["profile","☺","Profile"]] as const;
+  const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"]] as const;
+
+  const myShowcase=Array.isArray(user?.profile?.lifestylePreferences?.profileShowcase)
+    ? user.profile.lifestylePreferences.profileShowcase : [];
+  const myVisualMedia=myShowcase.filter((x:any)=>x?.kind==="photo"||x?.kind==="video").slice(0,6);
+  const myProfilePhoto=myVisualMedia.find((x:any)=>x.kind==="photo")||myVisualMedia[0]||null;
+  const myProfileAvatarSrc=myProfilePhoto?.pathname
+    ? "/api/profile/media?pathname="+encodeURIComponent(myProfilePhoto.pathname) : "";
+  const myProfileInitial=String(user?.profile?.displayName||"U").slice(0,1).toUpperCase();
 
   if (!authChecked) return <div className="cuddl-app"><main className="content"><div className="panel"><b>Loading Cuddl…</b><p className="sub">Checking your secure session.</p></div></main></div>;
   if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">{authMode==="login"?"Meet through activities, games, music and real conversations.":"One real identity per person. Verification is required for trust and safety."}</p><form className="panel auth-form" onSubmit={submitAuth}>
@@ -629,7 +643,13 @@ export default function Home() {
     <div className="cuddl-app">
       <header className="topbar">
         <div className="brand">Cuddl</div>
-        <button className="icon-btn" aria-label="Safety Center" onClick={() => notify("Safety Center ready")}>♡</button>
+        <div className="topbar-actions">
+          <button className="top-profile-link" aria-label="Open profile" onClick={()=>setTab("profile")}>
+            <span className="top-profile-avatar">{myProfileAvatarSrc?<img src={myProfileAvatarSrc} alt="" />:myProfileInitial}</span>
+            <span>Profile</span>
+          </button>
+          <button className="icon-btn" aria-label="Safety Center" onClick={() => notify("Safety Center ready")}>♡</button>
+        </div>
       </header>
 
       <main className="content">
@@ -752,10 +772,10 @@ export default function Home() {
           </section>
 
           <div className="eyebrow" style={{marginTop:18}}>Activities</div>
-          {activities.map(([icon,name,tags,count]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{count} · participants active</div></div><button className="join" onClick={() => notify("Joined " + name)}>Join</button></div><div className="room-meta">{tags} · camera optional · spectator mode</div></div>)}
+          {activities.map(([icon,name,tags,count]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{count} · participants active</div></div><button className="join" onClick={() => setRoomOpen({type:"Activity",icon,name,meta:tags+" · "+count+" participants active"})}>Join</button></div><div className="room-meta">{tags} · camera optional · spectator mode</div></div>)}
 
           <div className="eyebrow" style={{marginTop:18}}>Games</div>
-          {games.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={() => notify("Joined " + name)}>Play</button></div></div>)}
+          {games.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={() => setRoomOpen({type:"Game",icon,name,meta})}>Play</button></div></div>)}
 
           {(loungeFilter==="All"||loungeFilter==="Music") && <><div className="eyebrow" style={{marginTop:18}}>Music</div>
           {music.map(([icon,name,meta]) => <div className="room" key={name} onClick={()=>setRoomOpen({type:"Music",icon,name,meta})}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={(e)=>{e.stopPropagation();setRoomOpen({type:"Music",icon,name,meta})}}>Join</button></div><div className="room-meta">🎥 Camera optional · 🎙️ Mic optional · 🎉 Cheer = appreciation · Spark = romantic interest</div></div>)}</>}
@@ -811,7 +831,7 @@ export default function Home() {
           {bottleData?.incoming&&<div className="panel bottle-incoming"><div className="eyebrow">You found a bottle</div><h2>🧴 Someone left you a message</h2><p className="sub">Open it to discover what they chose to share. Their identity stays hidden until you choose to connect.</p><button className="btn" disabled={bottleBusy} onClick={()=>bottleAction("open",bottleData.incoming.id)}>Open bottle</button></div>}
           {openedBottle&&<div className="panel bottle-opened"><div className="eyebrow">Bottle opened</div><h2>✨ A little mystery revealed</h2><p className="bottle-text">{openedBottle.text}</p>{Array.isArray(openedBottle.media)&&<div className="bottle-media-grid">{openedBottle.media.map((m:any,i:number)=>{const src="/api/profile/media?pathname="+encodeURIComponent(m.pathname);return <div key={m.pathname||i}>{m.kind==="photo"?<img src={src} alt="Bottle"/>:m.kind==="video"?<video controls playsInline src={src}/>:<audio controls src={src}/>}</div>})}</div>}<div className="actions"><button className="btn" disabled={bottleBusy} onClick={()=>bottleAction("connect",openedBottle.id)}>💗 Connect</button><button className="btn ghost" disabled={bottleBusy} onClick={()=>bottleAction("pass",openedBottle.id)}>Pass</button><button className="btn ghost" disabled={bottleBusy} onClick={()=>bottleAction("report",openedBottle.id)}>Report</button></div></div>}
           {!openedBottle&&!bottleData?.incoming&&<div className="panel"><div className="eyebrow">Create your bottle</div><h2>What would you send into the unknown?</h2><textarea className="field profile-textarea" maxLength={700} placeholder="Write something genuine, playful or curious…" value={bottleText} onChange={e=>setBottleText(e.target.value)}/>
-            <div className="bottle-upload-row"><label className="prompt-media-btn">📸 Photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"photo");e.currentTarget.value=""}}/></label><label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"video");e.currentTarget.value=""}}/></label><button className="prompt-media-btn" onClick={async()=>{if(!navigator.mediaDevices?.getUserMedia){notify("Voice recording is not supported");return;}try{const s=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(s);const chunks:Blob[]=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);rec.onstop=async()=>{s.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});const file=new File([blob],"bottle-voice.webm",{type:blob.type});const b=await upload(`profile-media/${user?.user?.id||user?.id}/bottle-voice-${Date.now()}.webm`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload"});setBottleMedia(m=>[...m,{kind:"voice",pathname:b.pathname}]);};rec.start();setTimeout(()=>rec.state==="recording"&&rec.stop(),20000);notify("Recording voice note…");}catch{notify("Microphone permission was not granted")}}}>🎙️ Voice</button></div>
+            <div className="bottle-upload-row"><label className="prompt-media-btn">📸 Photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"photo");e.currentTarget.value=""}}/></label><label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"video");e.currentTarget.value=""}}/></label><button className="prompt-media-btn" onClick={async()=>{if(!navigator.mediaDevices?.getUserMedia){notify("Voice recording is not supported");return;}try{const s=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(s);const chunks:Blob[]=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);rec.onstop=async()=>{s.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});const file=new File([blob],"bottle-voice.webm",{type:blob.type});const b=await upload(`profile-media/${user?.user?.id||user?.id}/bottle-voice-${Date.now()}.webm`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload",clientPayload:await getUploadClientPayload()});setBottleMedia(m=>[...m,{kind:"voice",pathname:b.pathname}]);};rec.start();setTimeout(()=>rec.state==="recording"&&rec.stop(),20000);notify("Recording voice note…");}catch{notify("Microphone permission was not granted")}}}>🎙️ Voice</button></div>
             {bottleMedia.length>0&&<div className="bottle-media-list">{bottleMedia.map((m,i)=><div key={m.pathname||i}>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"} <button className="chip" onClick={()=>setBottleMedia(x=>x.filter((_,j)=>j!==i))}>Remove</button></div>)}</div>}
             <button className="btn" disabled={bottleBusy} onClick={throwBottle}>🌊 Throw bottle into the ocean</button>
           </div>}
@@ -820,8 +840,19 @@ export default function Home() {
         </>}
 
         {tab === "profile" && <>
-          <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div>{Array.isArray(user?.profile?.lifestylePreferences?.personalityPrompts)&&user.profile.lifestylePreferences.personalityPrompts.some((x:any)=>x?.answer)&&<div className="panel"><b>✨ Your personality story</b><p className="sub">Your selected prompts are visible on your profile.</p></div>}<div className="actions"><button className="btn" onClick={()=>setBoostOpen(true)}>🚀 Boost profile</button><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="eyebrow">Your profile · {city}</div>
+          <h1 className="hero-title">This is how people meet you.</h1>
+          <div className="panel profile-tinder-card">
+            <div className="profile-tinder-media">
+              {myVisualMedia.length>0 ? myVisualMedia.map((x:any,i:number)=>{
+                const src=x.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.pathname):"";
+                return <div className="profile-tinder-thumb" key={x.pathname||i}>{x.kind==="video"?<video muted playsInline preload="metadata" src={src}/>:<img src={src} alt="" />}</div>;
+              }) : <div className="profile-tinder-empty"><span className="top-profile-avatar large">{myProfileInitial}</span><div><b>Add your first profile photo</b><small>Your photos and videos will appear here.</small></div></div>}
+            </div>
+            <div className="profile-tinder-copy"><div><h2>{user?.profile?.displayName||"Your profile"}</h2><p className="sub">{user?.profile?.city||city}</p></div><p className="profile-bio">{user?.profile?.bio||"Add a short bio so people know what makes you, you."}</p></div>
+            <div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
+          </div>
+          <div className="panel"><b>✨ Profile story</b><p className="safe">Prompts, languages, lifestyle and trust details stay attached to your profile. Edit them anytime.</p></div>
           <div className="panel"><div className="eyebrow">Rewards</div><h3>🎁 Refer & earn</h3><p className="safe">Invite friends to Cuddl. When the referral meets the admin-defined qualifying condition, your reward is credited to your account.</p><div className="actions"><button className="btn" onClick={openReferral}>Open referral & rewards</button></div></div>
           <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions"><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
           <div className="grid">
@@ -950,7 +981,7 @@ export default function Home() {
                 <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"personality",i,"video");e.currentTarget.value=""}} /></label>
                 <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("personality",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
               </div>
-              {Array.isArray(media)&&media.length>0&&<div className="prompt-media-added-list">{media.map((m:any,j:number)=>{const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";return <div className="prompt-media-added" key={m.pathname||j}><div className="prompt-media-thumb">{m.kind==="photo"&&src?<img src={src} alt="Prompt photo"/>:m.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:<span className="prompt-media-icon">{m.kind==="voice"?"🎙️":"Media"}</span>}</div><span>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"}</span><button type="button" className="chip" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>Remove</button></div>})}</div>}
+              {Array.isArray(media)&&media.length>0&&<div className="media-thumb-grid">{media.map((m:any,j:number)=>{const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";return <div className="media-thumb-card" key={m.pathname||j}>{m.kind==="photo"&&src?<img src={src} alt=""/>:m.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:<div className="media-thumb-icon">{m.kind==="voice"?"🎙️":"•"}</div>}<button type="button" className="media-thumb-remove" aria-label="Remove media" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>×</button></div>})}</div>})}</div>}
             </div>
           })}
           <div className="filter-section-title">🎨 Profile-wide Personality Showcase</div>
@@ -960,15 +991,12 @@ export default function Home() {
             <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="voice"?stopShowcaseRecording():startShowcaseRecording("voice")} disabled={showcaseBusy}><span>🎙️</span><b>{showcaseRecording==="voice"?"Stop voice":"Record voice"}</b><small>Up to 20 seconds</small></button>
             <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="video"?stopShowcaseRecording():startShowcaseRecording("video")} disabled={showcaseBusy}><span>🎥</span><b>{showcaseRecording==="video"?"Stop video":"Record video"}</b><small>Up to 15 seconds</small></button>
           </div>
-          {Array.isArray(profileDraft.profileShowcase)&&profileDraft.profileShowcase.length>0&&<div className="showcase-preview-list">
+          {Array.isArray(profileDraft.profileShowcase)&&profileDraft.profileShowcase.length>0&&<div className="media-thumb-grid showcase-media-grid">
             {profileDraft.profileShowcase.map((x:any,i:number)=>{
-              const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
-              return <div className="showcase-preview" key={x.pathname||i}>
-                <div className="showcase-thumb">
-                  {x.kind==="photo"&&src?<img src={src} alt="Selected profile photo"/>:x.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:x.kind==="voice"&&src?<div className="showcase-audio-thumb">🎙️</div>:<span>Media</span>}
-                </div>
-                <div className="showcase-preview-copy"><b>{x.kind==="photo"?"📸 Profile photo":x.kind==="voice"?"🎙️ Voice intro":"🎥 Video intro"}</b><span>Added to your profile</span></div>
-                <button type="button" className="chip" onClick={()=>setProfileDraft((d:any)=>({...d,profileShowcase:(d.profileShowcase||[]).filter((_:any,j:number)=>j!==i)}))}>Remove</button>
+              const src=x.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.pathname):"";
+              return <div className="media-thumb-card" key={x.pathname||i}>
+                {x.kind==="photo"&&src?<img src={src} alt=""/>:x.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:x.kind==="voice"&&src?<div className="media-thumb-icon">🎙️</div>:<div className="media-thumb-icon">•</div>}
+                <button type="button" className="media-thumb-remove" aria-label="Remove media" onClick={()=>setProfileDraft((d:any)=>({...d,profileShowcase:(d.profileShowcase||[]).filter((_:any,j:number)=>j!==i)}))}>×</button>
               </div>
             })}
           </div>}
@@ -1002,7 +1030,7 @@ export default function Home() {
                 <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"partner",i,"video");e.currentTarget.value=""}} /></label>
                 <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("partner",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
               </div>
-              {Array.isArray(media)&&media.length>0&&<div className="prompt-media-added-list">{media.map((m:any,j:number)=><div className="prompt-media-added" key={m.pathname||j}><span>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"}</span><button type="button" className="chip" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>Remove</button></div>)}</div>}
+              {Array.isArray(media)&&media.length>0&&<div className="media-thumb-grid">{media.map((m:any,j:number)=>{const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";return <div className="media-thumb-card" key={m.pathname||j}>{m.kind==="photo"&&src?<img src={src} alt=""/>:m.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:<div className="media-thumb-icon">{m.kind==="voice"?"🎙️":"•"}</div>}<button type="button" className="media-thumb-remove" aria-label="Remove media" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>×</button></div>})}</div>}
             </div>
           })}
         </div>
@@ -1017,8 +1045,8 @@ export default function Home() {
       </div></div>}
       {profileModal==="feature" && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Cuddl feature</div><h2>{activeFeature.title}</h2><p className="sub">{activeFeature.copy}</p>
-        <div className="panel"><b>Coming into focus</b><p className="sub">This opens as a dedicated Cuddl experience. Your profile controls remain available while we build the full interaction flow.</p></div>
-        <button className="btn" onClick={()=>notify(activeFeature.title+" opened")}>Explore</button>
+        <div className="panel"><b>Ready to explore</b><p className="sub">Open this Cuddl experience and continue from here. The current build keeps the interaction lightweight while the full dedicated flow is expanded.</p></div>
+        <button className="btn" onClick={()=>{setProfileModal(null);setTab(activeFeature.title==="Serendipity Mode"?"discover":"lounge");notify(activeFeature.title+" opened ✦")}}>Explore</button>
         <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
       </div></div>}
       {forgotOpen && <div className="overlay popup-overlay"><div className="login-popup">
