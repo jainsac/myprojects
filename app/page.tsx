@@ -72,11 +72,6 @@ export default function Home() {
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
-  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({displayName:"",city:"",bio:"",company:"",profession:"",religion:"",community:""});
-  const [matchFilters, setMatchFilters] = useState({company:"",profession:"",religion:"",community:""});
-  const [matchResults, setMatchResults] = useState<any[]>([]);
-  const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => {
@@ -179,10 +174,6 @@ export default function Home() {
     finally { setChatBusy(false); }
   }
   const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
-  function openProfileEditor(){ const p=user?.profile||{}; const lp=p.lifestylePreferences||{}; setProfileForm({displayName:p.displayName||user?.user?.email?.split("@")[0]||"",city:p.city||"",bio:p.bio||"",company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||"")}); setProfileEditorOpen(true); }
-  async function saveProfile(){ try{ const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(profileForm)}); const d=await r.json(); if(!r.ok)throw new Error(d.error||"Profile update failed"); setUser((u:any)=>u?{...u,profile:{...u.profile,...d.profile}}:u); setProfileEditorOpen(false); notify("Profile updated"); }catch(err){notify(err instanceof Error?err.message:"Profile update failed");} }
-  async function searchMatches(){ const qs=new URLSearchParams(); Object.entries(matchFilters).forEach(([k,v])=>{if(v.trim())qs.set(k,v.trim())}); const r=await fetch("/api/discover?"+qs.toString(),{cache:"no-store"}); const d=await r.json(); if(Array.isArray(d.profiles))setMatchResults(d.profiles); }
-  function changePhoto(id:string,total:number,delta:number){setPhotoIndexes(v=>({...v,[id]:((v[id]||0)+delta+total)%total}));}
 
   async function startFreeCamera(angle:"front"|"left"|"right"=cameraAngle){
     if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){notify("Camera needs a secure HTTPS page and a supported browser");return;}
@@ -295,17 +286,12 @@ export default function Home() {
           <p className="sub">Discover people, then play, listen, explore and let chemistry happen naturally.</p>
 
           <section className="panel">
-            <div className="eyebrow">Normal Search</div>
-            <p className="sub">Browse profiles with full photos. Use the arrows to manually see every approved photo.</p>
-            <div className="discover-photo">
-              {((person.media||[]).length>0) ? <img src={(person.media||[])[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
-              {(person.media||[]).length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id,(person.media||[]).length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id,(person.media||[]).length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id]||0)+1}/{person.media.length} photos</span></>}
-            </div>
-            <div className="profile-row" style={{marginTop:12}}>
+            <div className="eyebrow">Daily Spark</div>
+            <div className="profile-row">
+              <div className="avatar">{person.initial}</div>
               <div className="grow"><b>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</b><div className="sub">⌖ {person.city} · Active today</div><div>{(person.tags ?? []).map((t:string) => <span className="tag" key={t}>{t}</span>)}</div></div>
-              <span className="score">{person.score||88}%</span>
+              <span className="score">{person.score}%</span>
             </div>
-            {(person.profession||person.company||person.religion||person.community) && <div className="profile-meta"><span>{person.profession||"Profession not added"}</span>{person.company&&<span>{person.company}</span>}{person.religion&&<span>{person.religion}</span>}{person.community&&<span>{person.community}</span>}</div>}
             <p className="sub">{person.bio || "Looking for someone kind, curious and ready for real conversations."}</p>
             <div className="actions">
               <button className="btn ghost" onClick={() => { setIndex(i => i + 1); notify("Passed — suggestions tuned"); }}>Pass</button>
@@ -353,20 +339,6 @@ export default function Home() {
         </>}
 
         {tab === "matches" && <>
-          <section className="panel">
-            <div className="eyebrow">Match Finder</div>
-            <h2 style={{margin:"6px 0 4px"}}>Find people by what matters to you.</h2>
-            <p className="sub">Search by company, profession, religion or community. These are optional profile fields and respect each user's visibility settings.</p>
-            <div className="filter-grid">
-              <input className="field" placeholder="Company" value={matchFilters.company} onChange={e=>setMatchFilters({...matchFilters,company:e.target.value})}/>
-              <input className="field" placeholder="Profession" value={matchFilters.profession} onChange={e=>setMatchFilters({...matchFilters,profession:e.target.value})}/>
-              <input className="field" placeholder="Religion" value={matchFilters.religion} onChange={e=>setMatchFilters({...matchFilters,religion:e.target.value})}/>
-              <input className="field" placeholder="Community" value={matchFilters.community} onChange={e=>setMatchFilters({...matchFilters,community:e.target.value})}/>
-            </div>
-            <div className="actions"><button className="btn" onClick={searchMatches}>Search matches</button><button className="btn ghost" onClick={()=>{setMatchFilters({company:"",profession:"",religion:"",community:""});setMatchResults([]);}}>Clear</button></div>
-          </section>
-          {matchResults.length>0 && <><div className="eyebrow">Search results</div>{matchResults.map((m:any)=><div className="panel" key={m.id}><div className="profile-row"><div className="avatar">{(m.displayName||"M")[0]}</div><div className="grow"><b>{m.displayName} ✓</b><div className="sub">{m.city||"City not added"}</div><div className="profile-meta">{[m.profession,m.company,m.religion,m.community].filter(Boolean).map((x:string)=><span key={x}>{x}</span>)}</div></div></div><div className="actions"><button className="btn" onClick={async()=>{try{await fetch("/api/sparks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({toUserId:m.id})});notify("Spark sent");}catch{notify("Could not send Spark")}}}>♥ Send Spark</button></div></div>)}</>}
-        {tab === "matches" && <>
           <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
           {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked.map(p=>({...p,matchId:undefined}))).map((p:any) => <div className="panel" key={p.matchId||p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}{p.age ? ", "+p.age : ""} ✓</b><div className="sub">{p.city || "Cuddl"}{p.score ? " · "+p.score+"% compatibility" : " · mutual connection"}</div></div></div><div className="actions"><button className="btn" onClick={() => openChat(p)} disabled={!p.matchId}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
           {chatMatch && <div className="panel chat-panel">
@@ -389,7 +361,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => notify("Privacy controls opened")}>Manage privacy</button></div>
           <div className="grid">
             {[
@@ -405,32 +377,21 @@ export default function Home() {
       </main>
 
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
-        <p className="sub">Capture three guided selfie angles. The black face guide shows the approximate head position and direction for each shot. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
-        <div className="camera-guide"><div className={"face-shadow "+cameraAngle}><span></span></div><div><b>{cameraAngle==="front"?"Look straight at the guide":"Turn slightly "+cameraAngle}</b><small>Keep your face inside the guide box and match the shadow.</small></div></div><div className="panel" style={{padding:12,display:freeVerificationStatus==="pending"?"none":"block"}}>
+        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
+        <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
+        <div className="panel" style={{padding:12}}>
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
           {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
           <canvas ref={cameraCanvasRef} style={{display:"none"}} />
-          <div className="actions">{!cameraStream?<button className="btn" disabled={cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={allFreeVerificationCaptured}>Stop camera</button>}</div>
+          <div className="actions">{!cameraStream?<button className="btn" disabled={freeVerificationStatus==="pending"||cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{freeVerificationStatus==="pending"?"Verification submitted ✓":allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Stop camera</button>}</div>
         </div>
-        <div className="verification-list" style={{display:freeVerificationStatus==="pending"?"none":"grid"}}>{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
-        <p className="safe" style={{display:freeVerificationStatus==="pending"?"none":"block"}}>Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
+        <div className="verification-list">{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
+        <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
         <button className="btn" disabled={freeVerificationStatus==="pending"||!allFreeVerificationCaptured||verificationSubmitting} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"VERIFICATION SUBMITTED":verificationSubmitting?"SUBMITTING…":"SUBMIT VERIFICATION"}</button>
         <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
         <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
       </div></div>}
 
-      {profileEditorOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Profile details</div><h2>Help people find you.</h2><p className="sub">These fields power optional Match Finder searches. Add only what you are comfortable sharing.</p>
-        <input className="field" placeholder="Profile name" value={profileForm.displayName} onChange={e=>setProfileForm({...profileForm,displayName:e.target.value})}/>
-        <input className="field" placeholder="City" value={profileForm.city} onChange={e=>setProfileForm({...profileForm,city:e.target.value})}/>
-        <input className="field" placeholder="Profession" value={profileForm.profession} onChange={e=>setProfileForm({...profileForm,profession:e.target.value})}/>
-        <input className="field" placeholder="Company" value={profileForm.company} onChange={e=>setProfileForm({...profileForm,company:e.target.value})}/>
-        <input className="field" placeholder="Religion" value={profileForm.religion} onChange={e=>setProfileForm({...profileForm,religion:e.target.value})}/>
-        <input className="field" placeholder="Community" value={profileForm.community} onChange={e=>setProfileForm({...profileForm,community:e.target.value})}/>
-        <textarea className="field" placeholder="Bio" value={profileForm.bio} onChange={e=>setProfileForm({...profileForm,bio:e.target.value})}/>
-        <button className="btn" onClick={saveProfile}>Save profile</button><button className="btn ghost" onClick={()=>setProfileEditorOpen(false)}>Cancel</button>
-      </div></div>}
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Profile media rules</div><h2>Your photos & videos</h2>
         <p className="sub">Only media showing you may be added to your dating profile. Group photos, other people, screenshots, memes, downloaded images and misleading media are not permitted.</p>
