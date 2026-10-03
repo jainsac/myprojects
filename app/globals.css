@@ -230,3 +230,13 @@
  .prompt-media-thumb{width:50px;height:50px}
  .prompt-media-added{grid-template-columns:50px 1fr auto}
 }
+
+
+/* Multi-language profile selector */
+.language-picker{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}
+.language-selected{min-height:46px;padding:13px;color:var(--ink);font-size:13px;border-bottom:1px solid var(--line);background:#fffafa}
+.language-options{max-height:230px;overflow:auto;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.language-option{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid transparent;border-radius:11px;background:#fff;color:#5e5256;font-size:11px;cursor:pointer}
+.language-option.selected{background:var(--rose);border-color:#f2c8ce;color:var(--r);font-weight:800}
+.language-option input{margin:0;accent-color:var(--r);width:16px;height:16px}
+@media(max-width:430px){.language-options{grid-template-columns:1fr}}
