@@ -6,19 +6,24 @@ export default function AdminPage(){
   const [activities,setActivities]=useState<any[]>([]);
   const [notifications,setNotifications]=useState<any[]>([]);
   const [verifications,setVerifications]=useState<any[]>([]);
+  const [refSettings,setRefSettings]=useState<any>({enabled:true,rewardType:"PLAN_EXTENSION",rewardValue:{months:1},qualificationEvent:"PROFILE_COMPLETE",maxRewardsPerUser:20});
+  const [offers,setOffers]=useState<any[]>([]);
+  const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
   const [noteForm,setNoteForm]=useState({title:"",body:"",audience:"all",city:"Delhi",showPopup:true,publishNow:true});
 
   async function load(){
-    const [f,n,v]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification")]);
-    const fd=await f.json(), nd=await n.json(), vd=await v.json();
+    const [f,n,v,o]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers")]);
+    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json();
     if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
-    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);
+    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);
   }
   useEffect(()=>{load()},[]);
 
+  async function saveReferralSettings(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/referral",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"settings",...refSettings})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save referral settings");return;}load();}
+  async function saveOffer(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(offerForm)});const d=await r.json();if(!r.ok){setError(d.error||"Could not save offer");return;}setOfferForm({...offerForm,code:""});load();}
   async function createFestival(e:React.FormEvent){
     e.preventDefault();setError("");
     const ids=activities.map(a=>a.id);
@@ -46,6 +51,27 @@ export default function AdminPage(){
   return <main className="admin-page">
     <div className="admin-head"><div><div className="eyebrow">Cuddl control room</div><h1>Admin Console</h1><p className="sub">Turn special experiences on for a limited occasion, then switch them off completely.</p></div><a className="btn ghost" href="/">Open app</a></div>
     {error&&<div className="auth-error">{error}</div>}
+    <section className="panel"><div className="eyebrow">Growth & rewards</div><h2>Referral program</h2>
+      <p className="sub">Define the qualifying event and reward. Rewards are recorded in a ledger for later entitlement/payment integration.</p>
+      <form className="admin-form" onSubmit={saveReferralSettings}>
+        <label className="check"><input type="checkbox" checked={!!refSettings.enabled} onChange={e=>setRefSettings({...refSettings,enabled:e.target.checked})}/> Referral program enabled</label>
+        <div className="admin-grid"><select className="field" value={refSettings.rewardType} onChange={e=>setRefSettings({...refSettings,rewardType:e.target.value})}><option value="PLAN_EXTENSION">Plan extension</option><option value="PLAN_UPGRADE">Plan upgrade</option><option value="MONETARY">Monetary reward</option><option value="BOOST">Boost credits</option><option value="SUPER_SPARK">Super Spark credits</option></select><select className="field" value={refSettings.qualificationEvent} onChange={e=>setRefSettings({...refSettings,qualificationEvent:e.target.value})}><option value="SIGNUP">Signup</option><option value="PROFILE_COMPLETE">Profile complete</option><option value="IDENTITY_VERIFIED">Identity verified</option><option value="PAID_PURCHASE">Paid purchase</option></select></div>
+        <input className="field" placeholder='Reward value JSON, e.g. {"months":1,"plan":"Plus"}' value={JSON.stringify(refSettings.rewardValue)} onChange={e=>{try{setRefSettings({...refSettings,rewardValue:JSON.parse(e.target.value)})}catch{}}}/>
+        <input className="field" inputMode="numeric" placeholder="Maximum referral rewards per user" value={refSettings.maxRewardsPerUser} onChange={e=>setRefSettings({...refSettings,maxRewardsPerUser:e.target.value})}/>
+        <button className="btn">Save referral rules</button>
+      </form>
+    </section>
+    <section className="panel"><div className="eyebrow">Payment offers</div><h2>Offer / coupon codes</h2>
+      <form className="admin-form" onSubmit={saveOffer}>
+        <input className="field" placeholder="Offer code" value={offerForm.code} onChange={e=>setOfferForm({...offerForm,code:e.target.value.toUpperCase()})} required/>
+        <div className="admin-grid"><select className="field" value={offerForm.discountType} onChange={e=>setOfferForm({...offerForm,discountType:e.target.value})}><option>PERCENT</option><option>FLAT</option></select><input className="field" placeholder="Discount value" value={offerForm.discountValue} onChange={e=>setOfferForm({...offerForm,discountValue:e.target.value})}/></div>
+        <div className="admin-grid"><input className="field" placeholder="Max redemptions" value={offerForm.maxRedemptions} onChange={e=>setOfferForm({...offerForm,maxRedemptions:e.target.value})}/><input className="field" placeholder="Per-user limit" value={offerForm.perUserLimit} onChange={e=>setOfferForm({...offerForm,perUserLimit:e.target.value})}/></div>
+        <input className="field" placeholder="Minimum purchase ₹" value={offerForm.minPurchase} onChange={e=>setOfferForm({...offerForm,minPurchase:e.target.value})}/>
+        <div className="chips">{["Plus","Pro","Premium"].map(p=><button type="button" className={"chip "+(offerForm.applicablePlans.includes(p)?"active":"")} key={p} onClick={()=>setOfferForm({...offerForm,applicablePlans:offerForm.applicablePlans.includes(p)?offerForm.applicablePlans.filter((x:string)=>x!==p):[...offerForm.applicablePlans,p]})}>{p}</button>)}</div>
+        <button className="btn">Create / update offer</button>
+      </form>
+      {offers.map(o=><div className="admin-row" key={o.id}><div><b>{o.code}</b><div className="sub">{o.discount_type} {o.discount_value} · {o.applicable_plans?.join(", ")||"all plans"} · {o.enabled?"active":"off"}</div></div><button className="btn ghost" onClick={async()=>{await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"toggle",code:o.code,enabled:!o.enabled})});load();}}>{o.enabled?"Switch off":"Switch on"}</button></div>)}
+    </section>
     <section className="panel">
       <div className="eyebrow">Festival control</div><h2>Create a special festival</h2>
       <p className="sub">A festival is invisible to users while off. When live, the festival hub appears in their account and lets them roam between its activities.</p>
