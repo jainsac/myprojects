@@ -16,6 +16,7 @@ export async function GET(){
   const active=await db.execute(sql`SELECT id,status,created_at,opened_at FROM bottles WHERE sender_id=${current.user.id} AND status='ACTIVE' ORDER BY created_at DESC LIMIT 1`);
   const month=await db.execute(sql`SELECT COUNT(*)::int AS count FROM bottles WHERE sender_id=${current.user.id} AND created_at>=date_trunc('month',now())`);
   const opened=await db.execute(sql`SELECT id,sender_id,content_text,media,status,created_at,opened_at FROM bottles WHERE receiver_id=${current.user.id} AND status='OPENED' ORDER BY opened_at DESC LIMIT 20`);
+  const incoming=await db.execute(sql`SELECT id,sender_id,content_text,media,status,created_at,expires_at FROM bottles WHERE receiver_id=${current.user.id} AND status='ACTIVE' ORDER BY created_at DESC LIMIT 1`);
   return NextResponse.json({plan:ent,limits:{PRO:Number(s.pro_monthly_limit),PREMIUM:Number(s.premium_monthly_limit)},usedThisMonth:Number((month as any).rows?.[0]?.count||0),active:(active as any).rows?.[0]||null,incoming:(incoming as any).rows?.[0]||null,opened:(opened as any).rows||[],settings:{openTimeoutDays:Number(s.open_timeout_days||30)}});
 }
 export async function POST(request:Request){
