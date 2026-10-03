@@ -72,7 +72,7 @@ export function ensureRewardsSchema(){
     `);
     await db.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id uuid REFERENCES users(id) ON DELETE CASCADE`);
     await db.execute(sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
-    await db.execute(sql\`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS bottle_settings (
         id integer PRIMARY KEY DEFAULT 1,
         pro_monthly_limit integer NOT NULL DEFAULT 2,
@@ -96,7 +96,7 @@ export function ensureRewardsSchema(){
       CREATE INDEX IF NOT EXISTS bottles_sender_status_idx ON bottles(sender_id,status);
       CREATE INDEX IF NOT EXISTS bottles_receiver_status_idx ON bottles(receiver_id,status);
     \`);
-    await db.execute(sql\`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING\`);
+    await db.execute(sql`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING\`);
   })();
   return ready;
 }
