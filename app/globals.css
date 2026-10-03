@@ -83,3 +83,14 @@
 .chat-card b,.chat-card small{display:block}.chat-card b{font-size:11px;margin-top:3px}.chat-card small{font-size:9px;color:var(--muted);margin-top:2px}
 .chat-tools-note{font-size:9px;color:var(--muted);margin-top:7px}
 @media(max-width:430px){.chat-card-row{grid-template-columns:1fr 1fr 1fr}.chat-card{padding:7px 6px}}
+
+.prompt-card{border:1px solid var(--line);border-radius:16px;padding:11px 12px;background:#fffafa;margin:8px 0}
+.prompt-card small{display:block;font-size:9px;letter-spacing:.08em;font-weight:900;color:var(--r);margin-bottom:4px}
+.prompt-card b{display:block;font-size:12px;margin-bottom:3px}.prompt-card span{display:block;font-size:13px;line-height:1.45;color:#4f4549}
+.prompt-card.partner-prompt{background:#fff}
+.prompt-editor{display:grid;gap:7px;margin:8px 0}
+.ai-coach{margin:10px 0;padding:11px;border:1px solid #ead9dc;border-radius:17px;background:linear-gradient(135deg,#fff8f9,#fff)}
+.coach-toggle{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);line-height:1.4;margin:8px 0}
+.coach-toggle input{margin-top:2px;accent-color:var(--r)}
+.coach-suggestions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.coach-suggestions .chip{text-align:left;white-space:normal}
