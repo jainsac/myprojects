@@ -102,6 +102,7 @@ export default function Home() {
   const [roomOpen, setRoomOpen] = useState<any>(null);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
+  const [promptRecordingTarget, setPromptRecordingTarget] = useState<{group:"personality"|"partner";index:number}|null>(null);
   const [showcaseBusy, setShowcaseBusy] = useState(false);
   const showcaseRecorderRef = useRef<MediaRecorder | null>(null);
   const showcaseStreamRef = useRef<MediaStream | null>(null);
@@ -182,7 +183,7 @@ export default function Home() {
     setOnboardingPromptOpen(false);
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts:[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts:[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts.map((x:any)=>({...x})):[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts.map((x:any)=>({...x})):[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
     setProfileModal("edit");
   }
   async function requestAiChatCoach(){
@@ -195,6 +196,75 @@ export default function Home() {
       setAiCoachSuggestion(Array.isArray(d.suggestions)?d.suggestions:[]);
     }catch(err){notify(err instanceof Error?err.message:"AI coach unavailable");}
     finally{setAiCoachBusy(false);}
+  }
+
+  async function uploadPromptMedia(file:File, group:"personality"|"partner", index:number, kind:"photo"|"video"){
+    if(!user?.user?.id && !user?.id)return;
+    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
+    setShowcaseBusy(true);
+    try{
+      const ext=(file.name.split(".").pop()||"webm").toLowerCase();
+      const blob=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-${kind}-${Date.now()}.${ext}`,file,{
+        access:"private",
+        handleUploadUrl:"/api/profile/media/upload"
+      });
+      setProfileDraft((d:any)=>{
+        const arr=[...(d[group==="personality"?"personalityPrompts":"partnerPrompts"]||[])];
+        const item={...(arr[index]||{question:"",answer:""})};
+        item.media={kind,pathname:blob.pathname};
+        arr[index]=item;
+        return {...d,[group==="personality"?"personalityPrompts":"partnerPrompts"]:arr};
+      });
+      notify(kind==="photo"?"Photo attached to prompt":"Video attached to prompt");
+    }catch(err){notify(err instanceof Error?err.message:"Could not upload prompt media");}
+    finally{setShowcaseBusy(false);}
+  }
+
+  async function startPromptVoiceRecording(group:"personality"|"partner", index:number){
+    if(promptRecordingTarget || showcaseRecording)return;
+    if(!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder==="undefined"){notify("Voice recording is not supported in this browser");return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const preferred="audio/webm;codecs=opus";
+      const mime=MediaRecorder.isTypeSupported(preferred)?preferred:"audio/webm";
+      const recorder=new MediaRecorder(stream,{mimeType:mime});
+      const chunks:Blob[]=[];
+      recorder.ondataavailable=(e)=>{if(e.data.size)chunks.push(e.data);};
+      recorder.onstop=async()=>{
+        const blob=new Blob(chunks,{type:mime});
+        try{
+          setShowcaseBusy(true);
+          const ext="webm";
+          const blobResult=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-voice-${Date.now()}.${ext}`,new File([blob],`cuddl-prompt-voice-${Date.now()}.webm`,{type:mime}),{access:"private",handleUploadUrl:"/api/profile/media/upload"});
+          setProfileDraft((d:any)=>{
+            const key=group==="personality"?"personalityPrompts":"partnerPrompts";
+            const arr=[...(d[key]||[])];
+            const item={...(arr[index]||{question:"",answer:""})};
+            item.media={kind:"voice",pathname:blobResult.pathname};
+            arr[index]=item;
+            return {...d,[key]:arr};
+          });
+          notify("Voice note attached to prompt");
+        }catch(err){notify(err instanceof Error?err.message:"Could not upload voice note");}
+        finally{setShowcaseBusy(false);}
+        stream.getTracks().forEach(t=>t.stop());
+      };
+      recorder.start();
+      showcaseRecorderRef.current=recorder;
+      showcaseStreamRef.current=stream;
+      setPromptRecordingTarget({group,index});
+      window.setTimeout(()=>{if(showcaseRecorderRef.current?.state==="recording")stopPromptVoiceRecording();},20000);
+    }catch(err){notify(err instanceof DOMException && err.name==="NotAllowedError"?"Microphone permission was denied":"Could not start voice recording");}
+  }
+
+  function stopPromptVoiceRecording(){
+    const recorder=showcaseRecorderRef.current;
+    if(recorder && recorder.state!=="inactive")recorder.stop();
+    showcaseRecorderRef.current=null;
+    showcaseStreamRef.current?.getTracks().forEach(t=>t.stop());
+    showcaseStreamRef.current=null;
+    setPromptRecordingTarget(null);
   }
 
   async function uploadProfileShowcase(file:File, kind:"photo"|"voice"|"video"){
@@ -694,29 +764,41 @@ export default function Home() {
         <button className="btn" onClick={()=>notify("Profile media storage is planned separately from verification storage")}>Add media</button>
         <button className="btn ghost" onClick={()=>setMediaOpen(false)}>Close</button>
       </div></div>}
-      {profileModal==="edit" && <div className="overlay popup-overlay"><div className="login-popup profile-modal">
-        <div className="eyebrow">Edit profile</div><h2>Make your profile yours.</h2>
+      {profileModal==="edit" && <div className="profile-editor-page"><div className="profile-editor-inner">
+        <div className="profile-editor-header"><div><div className="eyebrow">Edit profile</div><h2>Make your profile yours.</h2><p className="sub">Build a profile that feels like you. Add context, prompts and media without the popup experience.</p></div><button className="icon-btn" onClick={()=>{setProfileModal(null);if(profileOnboarding)setOnboardingPromptOpen(true);}} aria-label="Close profile editor">×</button></div>
         <div className="auth-form">
           <input className="field" placeholder="Profile name" value={profileDraft.displayName} onChange={e=>setProfileDraft({...profileDraft,displayName:e.target.value})}/>
           <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})} required />
           <textarea className="field profile-textarea" placeholder="Short bio (tell people something real about you)" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})} minLength={10} required />
           <div className="profile-extended-grid"><input className="field" placeholder="State" value={profileDraft.state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value})}/><input className="field" placeholder="Food preference" value={profileDraft.foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value})}/><input className="field" placeholder="Company" value={profileDraft.company||""} onChange={e=>setProfileDraft({...profileDraft,company:e.target.value})}/><input className="field" placeholder="Profession" value={profileDraft.profession||""} onChange={e=>setProfileDraft({...profileDraft,profession:e.target.value})}/><input className="field" placeholder="Religion" value={profileDraft.religion||""} onChange={e=>setProfileDraft({...profileDraft,religion:e.target.value})}/><input className="field" placeholder="Community" value={profileDraft.community||""} onChange={e=>setProfileDraft({...profileDraft,community:e.target.value})}/><select className="field" value={profileDraft.diet||""} onChange={e=>setProfileDraft({...profileDraft,diet:e.target.value})}><option value="">Diet</option><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Jain</option><option>Non-vegetarian</option><option>Anything</option></select><select className="field" value={profileDraft.smoking||""} onChange={e=>setProfileDraft({...profileDraft,smoking:e.target.value})}><option value="">Smoking</option><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Drinking</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select><input className="field" placeholder="Relationship goal" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}/><input className="field" placeholder="Education" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}/><input className="field" placeholder="Children preference" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}/><input className="field" placeholder="Pets preference" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}/><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select><input className="field" placeholder="Language(s)" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}/><input className="field" inputMode="numeric" placeholder="Height (cm)" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value.replace(/\D/g,"")})}/></div><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
           <div className="filter-section-title">✨ Show your personality</div>
-          <p className="safe">Choose up to 3. These are visible on your profile and help people start a real conversation.</p>
+          <p className="safe">Choose up to 3. Each prompt can have its own photo, video or voice note so your answer feels more real.</p>
           {[0,1,2].map((i:number)=>{
             const item=profileDraft.personalityPrompts?.[i]||{question:"",answer:""};
-            return <div className="prompt-editor" key={"pp-"+i}>
-              <select className="field" value={item.question} onChange={e=>{const a=[...(profileDraft.personalityPrompts||[])];a[i]={question:e.target.value,answer:item.answer};setProfileDraft({...profileDraft,personalityPrompts:a})}}>
+            const media=item.media;
+            const setItem=(patch:any)=>{
+              const a=[...(profileDraft.personalityPrompts||[])];
+              a[i]={...(a[i]||{question:"",answer:""}),...patch};
+              setProfileDraft({...profileDraft,personalityPrompts:a});
+            };
+            return <div className="prompt-editor prompt-editor-rich" key={"pp-"+i}>
+              <select className="field" value={item.question} onChange={e=>setItem({question:e.target.value})}>
                 <option value="">Personality prompt {i+1}</option>
                 <option>I'm happiest when…</option><option>In my friend group, I'm the one who…</option><option>I could talk all night about…</option><option>A perfect Sunday for me is…</option><option>Something people notice about me…</option><option>My most spontaneous decision was…</option><option>My underrated talent is…</option><option>You'll never guess that I…</option>
               </select>
-              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.personalityPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,personalityPrompts:a})}} />
+              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer||""} onChange={e=>setItem({answer:e.target.value})} />
+              <div className="prompt-media-tools">
+                <label className="prompt-media-btn">📸 Photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"personality",i,"photo");e.currentTarget.value=""}} /></label>
+                <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"personality",i,"video");e.currentTarget.value=""}} /></label>
+                <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("personality",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
+              </div>
+              {media?.pathname&&<div className="prompt-media-added"><span>{media.kind==="photo"?"📸 Photo attached":media.kind==="video"?"🎥 Video attached":"🎙️ Voice note attached"}</span><button type="button" className="chip" onClick={()=>setItem({media:null})}>Remove</button></div>}
             </div>
           })}
-          <div className="filter-section-title">🎨 Personality Showcase</div>
-          <p className="safe">Go beyond text. Add one photo, a short voice intro, a quick video, and a few personality stickers. These make your profile easier to explore.</p>
+          <div className="filter-section-title">🎨 Profile-wide Personality Showcase</div>
+          <p className="safe">Optional media that represents your overall vibe. Prompt media above stays attached to its specific answer.</p>
           <div className="showcase-upload-grid">
-            <label className="showcase-upload"><span>📸</span><b>Add photo</b><small>Show a moment that feels like you</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>handleShowcaseFile(e,"photo")} /></label>
+            <label className="showcase-upload"><span>📸</span><b>Add profile photo</b><small>Show a moment that feels like you</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>handleShowcaseFile(e,"photo")} /></label>
             <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="voice"?stopShowcaseRecording():startShowcaseRecording("voice")} disabled={showcaseBusy}><span>🎙️</span><b>{showcaseRecording==="voice"?"Stop voice":"Record voice"}</b><small>Up to 20 seconds</small></button>
             <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="video"?stopShowcaseRecording():startShowcaseRecording("video")} disabled={showcaseBusy}><span>🎥</span><b>{showcaseRecording==="video"?"Stop video":"Record video"}</b><small>Up to 15 seconds</small></button>
           </div>
@@ -736,14 +818,26 @@ export default function Home() {
           <p className="safe">These help Cuddl understand compatibility. You control what you reveal.</p>
           {[0,1,2].map((i:number)=>{
             const item=profileDraft.partnerPrompts?.[i]||{question:"",answer:""};
-            return <div className="prompt-editor" key={"vp-"+i}>
-              <select className="field" value={item.question} onChange={e=>{const a=[...(profileDraft.partnerPrompts||[])];a[i]={question:e.target.value,answer:item.answer};setProfileDraft({...profileDraft,partnerPrompts:a})}}>
+            const media=item.media;
+            const setItem=(patch:any)=>{
+              const a=[...(profileDraft.partnerPrompts||[])];
+              a[i]={...(a[i]||{question:"",answer:""}),...patch};
+              setProfileDraft({...profileDraft,partnerPrompts:a});
+            };
+            return <div className="prompt-editor prompt-editor-rich" key={"vp-"+i}>
+              <select className="field" value={item.question} onChange={e=>setItem({question:e.target.value})}>
                 <option value="">Partner preference {i+1}</option>
                 <option>I'm looking for someone who…</option><option>A relationship works best for me when…</option><option>One thing that matters to me long-term…</option><option>My ideal way to spend a free day together…</option><option>Communication matters to me because…</option><option>When there's a disagreement, I prefer…</option><option>Family and relationships…</option><option>I'd love a partner who is curious about…</option>
               </select>
-              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.partnerPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,partnerPrompts:a})}} />
+              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer||""} onChange={e=>setItem({answer:e.target.value})} />
+              <div className="prompt-media-tools">
+                <label className="prompt-media-btn">📸 Photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"partner",i,"photo");e.currentTarget.value=""}} /></label>
+                <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"partner",i,"video");e.currentTarget.value=""}} /></label>
+                <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("partner",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
+              </div>
+              {media?.pathname&&<div className="prompt-media-added"><span>{media.kind==="photo"?"📸 Photo attached":media.kind==="video"?"🎥 Video attached":"🎙️ Voice note attached"}</span><button type="button" className="chip" onClick={()=>setItem({media:null})}>Remove</button></div>}
             </div>
-          })}
+          })}})}
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
         <button className="btn ghost" onClick={()=>{setProfileModal(null);if(profileOnboarding)setOnboardingPromptOpen(true);}}>Close</button>
