@@ -1,25 +1,35 @@
 import { NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
-import { getCurrentUser } from "../../../../../lib/auth";
+import { createMediaUploadToken, getCurrentUser, verifyMediaUploadToken } from "../../../../../lib/auth";
 
 const allowed=["image/*","audio/*","video/*"];
 
-export async function POST(request:Request){
+export async function GET(){
   const current=await getCurrentUser();
   if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
+  return NextResponse.json({clientPayload:createMediaUploadToken(current.user.id)});
+}
+
+export async function POST(request:Request){
   try{
     const body=await request.json();
+    let userId=(await getCurrentUser())?.user.id||null;
+    if(!userId){
+      const clientPayload=body?.payload?.clientPayload;
+      if(typeof clientPayload==="string") userId=verifyMediaUploadToken(clientPayload);
+    }
+    if(!userId)return NextResponse.json({error:"Sign in required."},{status:401});
     return NextResponse.json(await handleUpload({
       body,
       request,
       onBeforeGenerateToken:async(pathname)=>{
-        const prefix=`profile-media/${current.user.id}/`;
+        const prefix="profile-media/"+userId+"/";
         if(!pathname.startsWith(prefix)) throw new Error("Invalid profile media path.");
         return {
           allowedContentTypes:allowed,
           maximumSizeInBytes:50*1024*1024,
           addRandomSuffix:true,
-          tokenPayload:JSON.stringify({userId:current.user.id})
+          tokenPayload:JSON.stringify({userId})
         };
       },
       onUploadCompleted:async()=>{}
