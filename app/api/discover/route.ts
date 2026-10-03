@@ -52,7 +52,7 @@ export async function GET() {
   if (blockedIds.length) conditions.push(notInArray(users.id, blockedIds));
 
   const rows = await db.select({
-    id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio, dateOfBirth: profiles.dateOfBirth,
+    id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio, dateOfBirth: profiles.dateOfBirth, updatedAt: users.updatedAt,
     avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals, lifestylePreferences: profiles.lifestylePreferences,
   }).from(users).innerJoin(profiles, eq(profiles.userId, users.id)).where(and(...conditions)).limit(30);
 
@@ -61,13 +61,15 @@ export async function GET() {
 
   const calculateAge=(dob:any)=>{if(!dob)return undefined;const d=new Date(dob);if(Number.isNaN(d.getTime()))return undefined;const now=new Date();let age=now.getFullYear()-d.getFullYear();const m=now.getMonth()-d.getMonth();if(m<0||(m===0&&now.getDate()<d.getDate()))age--;return age>0?age:undefined;};
   const realProfiles = rows.filter(x => !sentIds.has(x.id)).map((profile) => {
+    const lastActivity = profile.updatedAt ? new Date(profile.updatedAt as any).getTime() : 0;
+    const activeNow = Number.isFinite(lastActivity) && (Date.now() - lastActivity) <= 15*60*1000;
     const existing = profile.lifestylePreferences && typeof profile.lifestylePreferences === "object"
       ? profile.lifestylePreferences as Record<string, unknown> : {};
-    return { ...profile, age:calculateAge(profile.dateOfBirth), lifestylePreferences: existing };
+    return { ...profile, age:calculateAge(profile.dateOfBirth), activeNow, lifestylePreferences: existing };
   });
 
   const test = testProfiles.map(p => ({
-    id:p.id, displayName:p.displayName, age:p.age, city:p.city, bio:p.bio,
+    id:p.id, displayName:p.displayName, age:p.age, city:p.city, bio:p.bio, activeNow:true,
     avatarUrl:testPhotoUrls(p.displayName,p.photos)[0],
     tags:p.tags, score:p.score, isTestProfile:true,
     lifestylePreferences:{
