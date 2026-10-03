@@ -837,7 +837,7 @@ export default function Home() {
               </div>
               {media?.pathname&&<div className="prompt-media-added"><span>{media.kind==="photo"?"📸 Photo attached":media.kind==="video"?"🎥 Video attached":"🎙️ Voice note attached"}</span><button type="button" className="chip" onClick={()=>setItem({media:null})}>Remove</button></div>}
             </div>
-          })}})}
+          })}
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
         <button className="btn ghost" onClick={()=>{setProfileModal(null);if(profileOnboarding)setOnboardingPromptOpen(true);}}>Close</button>
