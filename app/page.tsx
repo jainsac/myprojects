@@ -107,6 +107,8 @@ export default function Home() {
   }, [user]);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => { if(!user) return; setLocationGranted(!!user?.profile?.lifestylePreferences?.locationGranted); if(typeof Notification!=="undefined") setNotificationPermission(Notification.permission); }, [user]);
+  useEffect(() => { if(!user) return; const ping=()=>{fetch("/api/heartbeat",{method:"POST"}).catch(()=>{});}; ping(); const timer=window.setInterval(ping, 5*60*1000); return ()=>window.clearInterval(timer); }, [user]);
+
   useEffect(() => {
     if(!user)return;
     registerChatPublicKey().catch(() => notify("Secure chat setup needs browser storage permission."));
