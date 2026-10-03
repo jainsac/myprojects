@@ -578,7 +578,7 @@ export default function Home() {
     notify("Spark sent 💗");
   }
 
-  const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["profile","☺","Profile"]] as const;
+  const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"],["profile","☺","Profile"]] as const;
 
   if (!authChecked) return <div className="cuddl-app"><main className="content"><div className="panel"><b>Loading Cuddl…</b><p className="sub">Checking your secure session.</p></div></main></div>;
   if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">{authMode==="login"?"Meet through activities, games, music and real conversations.":"One real identity per person. Verification is required for trust and safety."}</p><form className="panel auth-form" onSubmit={submitAuth}>
@@ -988,7 +988,7 @@ export default function Home() {
       </div></div>}
       {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
-        {nav.map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
+        {nav.map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile" && id!=="bottle"){setProfileModal("edit");notify("Complete your profile before browsing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
       </nav>
       {toast && <div role="status" style={{position:"fixed",left:"50%",bottom:84,transform:"translateX(-50%)",background:"#282326",color:"#fff",borderRadius:99,padding:"11px 15px",fontSize:12,zIndex:80}}>{toast}</div>}
     </div>
