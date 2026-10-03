@@ -507,14 +507,14 @@ export default function Home() {
             </div>
             <form className="chat-compose" onSubmit={sendMessage}><input className="field" value={chatText} onChange={e=>setChatText(e.target.value)} maxLength={2000} placeholder="Write a message…" /><button className="btn" disabled={chatBusy||!chatText.trim()}>{chatBusy?"…":"Send"}</button></form>
           </div>}
-          <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => setRoomOpen({type:"AI Wingman",icon:"✦",name:"Create opener",meta:"Draft conversation starters from shared activities. Nothing is sent without your approval."})>Create opener</button></div>
+          <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => setRoomOpen({type:"AI Wingman",icon:"✦",name:"Create opener",meta:"Draft conversation starters from shared activities. Nothing is sent without your approval."})}>Create opener</button></div>
         </>}
 
         {tab === "dates" && <>
           <div className="eyebrow">Date Studio</div><h1 className="hero-title">Turn a connection into a memory.</h1><p className="sub">Build low-pressure plans around shared interests, budget and city.</p>
-          <div className="panel"><b>✦ Chemistry Date</b><p className="sub">Café + live acoustic set · 90 min · ₹800–₹1,200 · public venue</p><button className="btn" onClick={() => setRoomOpen({type:"Date Studio",icon:"✦",name:"Chemistry Date ideas",meta:"3 low-pressure public-date concepts created from shared interests"})>Create ideas</button></div>
-          <div className="panel"><b>🛟 Date Safety</b><p className="sub">Share plan, trusted contact and arrival check-in.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Safety",icon:"🛟",name:"Date Safety Center",meta:"Share plan, trusted contact and arrival check-in"})>Open Safety Center</button></div>
-          <div className="panel"><b>💌 Date Capsule</b><p className="sub">Both answer one question. Answers unlock together after the date.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Date Capsule",icon:"💌",name:"Date Capsule",meta:"Create a question for both people to answer"})>Create capsule</button></div>
+          <div className="panel"><b>✦ Chemistry Date</b><p className="sub">Café + live acoustic set · 90 min · ₹800–₹1,200 · public venue</p><button className="btn" onClick={() => setRoomOpen({type:"Date Studio",icon:"✦",name:"Chemistry Date ideas",meta:"3 low-pressure public-date concepts created from shared interests"})}>Create ideas</button></div>
+          <div className="panel"><b>🛟 Date Safety</b><p className="sub">Share plan, trusted contact and arrival check-in.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Safety",icon:"🛟",name:"Date Safety Center",meta:"Share plan, trusted contact and arrival check-in"})}>Open Safety Center</button></div>
+          <div className="panel"><b>💌 Date Capsule</b><p className="sub">Both answer one question. Answers unlock together after the date.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Date Capsule",icon:"💌",name:"Date Capsule",meta:"Create a question for both people to answer"})}>Create capsule</button></div>
         </>}
 
         {tab === "profile" && <>
