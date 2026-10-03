@@ -20,3 +20,5 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Build application without database migration
         run: npm run build:app
+
+# Keep the master push as a real Git event for the connected Vercel project.
