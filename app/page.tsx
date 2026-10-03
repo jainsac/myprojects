@@ -76,14 +76,27 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState({displayName:"",city:"",bio:"",gender:"",desiredGender:"ANY"});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",foodPreference:""});
   const [profileSaving, setProfileSaving] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [matchFilters, setMatchFilters] = useState({company:"",profession:"",religion:"",community:""});
+  const [matchFilters, setMatchFilters] = useState({
+  company:"",profession:"",religion:"",community:"",ageMin:"18",ageMax:"60",
+  gender:"",city:"",state:"",distance:"",food:"",diet:"",smoking:"",drinking:"",
+  relationshipGoal:"",education:"",children:"",pets:"",exercise:"",language:"",heightMin:"",heightMax:"",verified:"",photos:""
+});
+  const [profileOnboarding, setProfileOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
-  useEffect(() => { if(!user) return; const prefs=user?.profile?.lifestylePreferences||{}; setDesiredGender(String(prefs.desiredGender||"ANY").toUpperCase()); }, [user]);
+  useEffect(() => {
+    if(!user) return;
+    const prefs=user?.profile?.lifestylePreferences||{};
+    setDesiredGender(String(prefs.desiredGender||"ANY").toUpperCase());
+    const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10;
+    setProfileOnboarding(!complete);
+    setOnboardingChecked(true);
+  }, [user]);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => {
     if(!user)return;
@@ -136,12 +149,12 @@ export default function Home() {
   const passwordChecks = useMemo(() => ({length: authForm.password.length >= 8, upper: /[A-Z]/.test(authForm.password), lower: /[a-z]/.test(authForm.password), number: /[0-9]/.test(authForm.password), special: /[^A-Za-z0-9]/.test(authForm.password)}), [authForm.password]);
   const passwordValid = Object.values(passwordChecks).every(Boolean);
   const passwordStrength = authForm.password.length===0 ? "" : Object.values(passwordChecks).filter(Boolean).length <= 2 ? "Weak" : Object.values(passwordChecks).filter(Boolean).length < 5 ? "Medium" : "Strong";
-  async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
+  async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); if(authMode==="register"){setProfileOnboarding(true);setTab("discover");} } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function saveDiscoveryPreference(value:string){ setDesiredGender(value); setGenderSaving(true); try { const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({desiredGender:value})}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not save preference"); setUser((current:any)=>current?{...current,profile:d.profile}:current); const a=await fetch("/api/discover",{cache:"no-store"}); const ad=await a.json(); if(Array.isArray(ad.profiles)) { setDiscoverProfiles(ad.profiles); setIndex(0); setPhotoIndexes({}); } notify(value==="ANY"?"Showing all genders":"Showing "+value.toLowerCase().replace("_"," ")+" profiles"); } catch(err){ notify(err instanceof Error?err.message:"Could not save preference"); } finally { setGenderSaving(false); } }
   function openProfileEditor(){
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),foodPreference:String(lp.foodPreference||"")});
     setProfileModal("edit");
   }
   async function saveProfile(){
@@ -152,8 +165,11 @@ export default function Home() {
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||"Could not save profile");
       setUser((current:any)=>current?{...current,profile:d.profile}:current);
-      setProfileModal(null);
-      notify("Profile updated");
+      const lp=d.profile?.lifestylePreferences||{};
+      const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10;
+      setProfileOnboarding(!complete);
+      setProfileModal(complete?null:"edit");
+      if(complete){setTab("discover");notify("Profile complete — welcome to Discover");} else notify("Please complete the required profile details");
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
     finally{setProfileSaving(false);}
   }
@@ -204,10 +220,36 @@ export default function Home() {
     } catch(err) { notify(err instanceof Error?err.message:"Could not send encrypted message"); }
     finally { setChatBusy(false); }
   }
-  const searchableProfiles = useMemo(() => discoverProfiles.filter((p:any) => {
-    const lp=p.lifestylePreferences||{};
-    return Object.entries(matchFilters).every(([key,value]) => !value.trim() || String(lp[key]||"").toLowerCase().includes(value.trim().toLowerCase()));
-  }), [discoverProfiles,matchFilters]);
+  const searchableProfiles = useMemo(() => {
+    const cityCoords:any={Delhi:[28.6139,77.2090],Gurugram:[28.4595,77.0266],Noida:[28.5355,77.3910],Mumbai:[19.0760,72.8777],Bengaluru:[12.9716,77.5946],Bangalore:[12.9716,77.5946],Pune:[18.5204,73.8567],Jaipur:[26.9124,75.7873],Hyderabad:[17.3850,78.4867],Chandigarh:[30.7333,76.7794]};
+    const km=(a:any,b:any)=>{if(!a||!b)return null;const R=6371,rad=(x:number)=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));};
+    const currentCity=String(user?.profile?.city||"Delhi");
+    const origin=cityCoords[currentCity]||null;
+    const text=(v:any)=>String(v??"").toLowerCase().trim();
+    const has=(v:any,q:string)=>!q||text(v).includes(text(q));
+    return discoverProfiles.filter((p:any)=>{
+      const lp=p.lifestylePreferences||{};
+      const age=Number(p.age||0);
+      const minAge=Number(matchFilters.ageMin||18), maxAge=Number(matchFilters.ageMax||60);
+      if(age && (age<minAge||age>maxAge)) return false;
+      if(matchFilters.gender && text(lp.gender)!==text(matchFilters.gender)) return false;
+      if(!has(p.city,matchFilters.city)) return false;
+      if(!has(lp.state,matchFilters.state)) return false;
+      if(!has(lp.company,matchFilters.company)||!has(lp.profession,matchFilters.profession)||!has(lp.religion,matchFilters.religion)||!has(lp.community,matchFilters.community)) return false;
+      if(!has(lp.foodPreference||lp.food,matchFilters.food)||!has(lp.diet,matchFilters.diet)||!has(lp.smoking,matchFilters.smoking)||!has(lp.drinking,matchFilters.drinking)) return false;
+      if(!has(lp.relationshipGoal||lp.relationshipGoals,matchFilters.relationshipGoal)||!has(lp.education,matchFilters.education)||!has(lp.children,matchFilters.children)||!has(lp.pets,matchFilters.pets)||!has(lp.exercise,matchFilters.exercise)||!has(lp.language||lp.languages,matchFilters.language)) return false;
+      if(matchFilters.heightMin && Number(lp.heightCm||lp.height||0)<Number(matchFilters.heightMin)) return false;
+      if(matchFilters.heightMax && Number(lp.heightCm||lp.height||0)>Number(matchFilters.heightMax)) return false;
+      if(matchFilters.verified==="yes" && lp.verified!==true && p.verified!==true) return false;
+      if(matchFilters.photos==="yes" && !((Array.isArray(lp.photos)&&lp.photos.length)||p.avatarUrl)) return false;
+      if(matchFilters.distance){
+        const target=cityCoords[String(p.city||"")];
+        const distance=origin&&target?km(origin,target):typeof lp.distanceKm==="number"?lp.distanceKm:null;
+        if(distance===null || distance>Number(matchFilters.distance)) return false;
+      }
+      return true;
+    });
+  }, [discoverProfiles,matchFilters,user]);
   const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : (discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length]), [index, searchableProfiles, discoverProfiles]);
   const personPhotos = useMemo(() => {
     const p:any=person||{};
@@ -216,6 +258,10 @@ export default function Home() {
     return Array.from(new Set([p.avatarUrl,...photos].filter(Boolean)));
   }, [person]);
   function changePhoto(id:string,total:number,delta:number){setPhotoIndexes(v=>({...v,[id]:((v[id]||0)+delta+total)%total}));}
+  const clearSearchFilters=()=>{setMatchFilters({company:"",profession:"",religion:"",community:"",ageMin:"18",ageMax:"60",gender:"",city:"",state:"",distance:"",food:"",diet:"",smoking:"",drinking:"",relationshipGoal:"",education:"",children:"",pets:"",exercise:"",language:"",heightMin:"",heightMax:"",verified:"",photos:""});setIndex(0);setPhotoIndexes({});};
+  const filterField=(key:string,label:string,options?:string[])=> options
+    ? <select className="field" value={(matchFilters as any)[key]} onChange={e=>setMatchFilters({...matchFilters,[key]:e.target.value})}><option value="">{label}</option>{options.map(x=><option key={x} value={x}>{x}</option>)}</select>
+    : <input className="field" placeholder={label} value={(matchFilters as any)[key]} onChange={e=>setMatchFilters({...matchFilters,[key]:e.target.value})}/>;
   
 
   async function startFreeCamera(angle:"front"|"left"|"right"=cameraAngle){
@@ -327,52 +373,78 @@ export default function Home() {
       <main className="content">
         {festival && <button className="festival-banner" onClick={openFestival}><span>{festival.festival.coverEmoji}</span><div><b>{festival.festival.name} is live</b><small>{festival.festival.tagline || "Roam freely between special activities for a limited time."}</small></div><strong>Explore →</strong></button>}
         {tab === "discover" && <>
-          <div className="eyebrow">Dating, but more alive</div>
-          <h1 className="hero-title">Meet through moments, not just swipes.</h1>
-          <p className="sub">Discover people, then play, listen, explore and let chemistry happen naturally.</p>
+          <div className="eyebrow">Smart discovery</div>
+          <h1 className="hero-title">Find the right people for you.</h1>
+          <p className="sub">Use as many filters as you like. More meaningful preferences can make discovery more relevant.</p>
 
-          <section className="panel">
-            <div className="eyebrow">Normal Search</div>
+          <section className="panel search-panel">
+            <div className="search-panel-head"><div><div className="eyebrow">Search & filters</div><b>Refine your discovery</b></div><span className="safe">{searchableProfiles.length} profiles</span></div>
+            <div className="filter-section-title">Basics</div>
+            <div className="filter-grid">
+              {filterField("ageMin","Min age")}
+              {filterField("ageMax","Max age")}
+              {filterField("gender","Gender",["MALE","FEMALE","NON_BINARY","OTHER"])}
+              {filterField("city","City")}
+              {filterField("state","State")}
+              {filterField("distance","Within km",["5","10","25","50","100","250"])}
+            </div>
+            <div className="filter-section-title">Work & background</div>
+            <div className="filter-grid">
+              {filterField("company","Company")}
+              {filterField("profession","Profession")}
+              {filterField("religion","Religion")}
+              {filterField("community","Community")}
+              {filterField("education","Education")}
+              {filterField("relationshipGoal","Relationship goal")}
+            </div>
+            <div className="filter-section-title">Lifestyle</div>
+            <div className="filter-grid">
+              {filterField("food","Food preference")}
+              {filterField("diet","Diet",["Vegetarian","Vegan","Eggetarian","Jain","Non-vegetarian","Anything"])}
+              {filterField("smoking","Smoking",["Never","Occasionally","Regularly","Prefer not to say"])}
+              {filterField("drinking","Drinking",["Never","Occasionally","Socially","Regularly","Prefer not to say"])}
+              {filterField("children","Children",["Want children","Have children","Do not want","Open to it"])}
+              {filterField("pets","Pets",["Love pets","Have pets","No pets","Open to pets"])}
+              {filterField("exercise","Exercise",["Daily","Often","Sometimes","Rarely"])}
+              {filterField("language","Language")}
+            </div>
+            <div className="filter-section-title">Physical & trust</div>
+            <div className="filter-grid">
+              {filterField("heightMin","Min height (cm)")}
+              {filterField("heightMax","Max height (cm)")}
+              {filterField("verified","Identity",["yes",""])}
+              {filterField("photos","Photos",["yes",""])}
+            </div>
+            <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
+          </section>
+
+          <section className="panel single-profile-panel">
+            <div className="eyebrow">Profile</div>
             <div className="discover-photo">
               {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
               {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
             </div>
-            <div className="profile-row" style={{marginTop:12}}>
-              <div className="grow"><b>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</b><div className="sub">⌖ {person.city} · Active today</div><div>{(person.tags ?? []).map((t:string) => <span className="tag" key={t}>{t}</span>)}</div></div>
-              <span className="score">{person.score||88}%</span>
+            <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · Active today</div></div><span className="score">{person.score||88}%</span></div>
+            <p className="profile-bio">{person.bio || "No bio added yet."}</p>
+            <div className="detail-grid">
+              <div><small>Company</small><b>{person.lifestylePreferences?.company||"—"}</b></div>
+              <div><small>Profession</small><b>{person.lifestylePreferences?.profession||"—"}</b></div>
+              <div><small>Religion</small><b>{person.lifestylePreferences?.religion||"—"}</b></div>
+              <div><small>Community</small><b>{person.lifestylePreferences?.community||"—"}</b></div>
+              <div><small>Food</small><b>{person.lifestylePreferences?.foodPreference||person.lifestylePreferences?.food||"—"}</b></div>
+              <div><small>Diet</small><b>{person.lifestylePreferences?.diet||"—"}</b></div>
+              <div><small>Relationship goal</small><b>{person.lifestylePreferences?.relationshipGoal||"—"}</b></div>
+              <div><small>Education</small><b>{person.lifestylePreferences?.education||"—"}</b></div>
+              <div><small>Children</small><b>{person.lifestylePreferences?.children||"—"}</b></div>
+              <div><small>Pets</small><b>{person.lifestylePreferences?.pets||"—"}</b></div>
+              <div><small>Smoking</small><b>{person.lifestylePreferences?.smoking||"—"}</b></div>
+              <div><small>Drinking</small><b>{person.lifestylePreferences?.drinking||"—"}</b></div>
             </div>
-            <p className="sub">{person.bio || "Looking for someone kind, curious and ready for real conversations."}</p>
-            <div className="actions">
-              <button className="btn ghost" onClick={() => { setIndex(i => i + 1); notify("Passed — suggestions tuned"); }}>Pass</button>
-              <button className="btn" onClick={spark}>♥ Send Spark</button>
-            </div>
-          </section>
-          <section className="panel">
-            <div className="eyebrow">Match Finder</div>
-            <p className="sub">Search profiles by Company, Profession, Religion or Community. Leave any field blank to ignore it.</p>
-            <div className="filter-grid">
-              <input className="field" placeholder="Company" value={matchFilters.company} onChange={e=>setMatchFilters({...matchFilters,company:e.target.value})}/>
-              <input className="field" placeholder="Profession" value={matchFilters.profession} onChange={e=>setMatchFilters({...matchFilters,profession:e.target.value})}/>
-              <input className="field" placeholder="Religion" value={matchFilters.religion} onChange={e=>setMatchFilters({...matchFilters,religion:e.target.value})}/>
-              <input className="field" placeholder="Community" value={matchFilters.community} onChange={e=>setMatchFilters({...matchFilters,community:e.target.value})}/>
-            </div>
-            <div className="actions"><button className="btn ghost" onClick={()=>{setMatchFilters({company:"",profession:"",religion:"",community:""});setIndex(0);}}>Clear filters</button><span className="safe">{searchableProfiles.length} matching profiles</span></div>
+            <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
+            <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
           </section>
 
-          <section className="panel">
-            <div className="eyebrow">Explore Together</div>
-            <h2 style={{margin:"6px 0 4px"}}>Shared interests become activities.</h2>
-            <p className="sub">Music + travel → road-trip playlist. Food + photography → street-food photo hunt. Trekking + nature → weekend trail.</p>
-          </section>
-
-          <div className="grid">
-            {[
-              ["🎮","Play Together","Ludo, Chess, Snake, quizzes and more."],
-              ["🎵","Music Together","Karaoke, duets, open mic and listening rooms."],
-              ["🎲","Social Roulette","Meet compatible people through a short activity."],
-              ["💌","Chemistry Capsule","Answer privately and reveal together."],
-            ].map(([icon,title,copy]) => <button className="card" key={title} onClick={() => {setTab("lounge");notify(title + " opened");}}><b>{icon} {title}</b><span>{copy}</span></button>)}
-          </div>
+          {!searchableProfiles.length && <div className="panel"><b>No profiles match these filters.</b><p className="sub">Try widening age, distance, city or lifestyle preferences.</p><button className="btn ghost" onClick={clearSearchFilters}>Clear filters</button></div>}
         </>}
 
         {tab === "lounge" && <>
@@ -468,9 +540,9 @@ export default function Home() {
         <div className="eyebrow">Edit profile</div><h2>Make your profile yours.</h2>
         <div className="auth-form">
           <input className="field" placeholder="Profile name" value={profileDraft.displayName} onChange={e=>setProfileDraft({...profileDraft,displayName:e.target.value})}/>
-          <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})}/>
-          <textarea className="field profile-textarea" placeholder="Short bio" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})}/>
-          <div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
+          <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})} required />
+          <textarea className="field profile-textarea" placeholder="Short bio (tell people something real about you)" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})} minLength={10} required />
+          <input className="field" placeholder="State" value={(profileDraft as any).state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value} as any)}/><input className="field" placeholder="Food preference" value={(profileDraft as any).foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value} as any)}/><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
         <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
@@ -494,6 +566,12 @@ export default function Home() {
         <button className="btn" onClick={()=>{setForgotOpen(false);notify(forgotEmail.trim()?"Reset email flow is pending email setup":"Enter your registered email")}}>Continue</button>
         <button className="btn ghost" onClick={()=>setForgotOpen(false)}>Close</button>
       </div></div>}
+      {profileOnboarding && onboardingChecked && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
+        <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
+        <p className="sub">Cuddl will take you to profile search only after these basic details are completed. This prevents browsing other members with an unfinished profile.</p>
+        <div className="verification-list"><div>✓ Profile name</div><div>✓ City</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div></div>
+        <button className="btn" onClick={openProfileEditor}>Update my profile</button>
+      </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
         <div className="sheet-head"><div><div className="eyebrow">Special occasion · Live now</div><h2>{festival.festival.coverEmoji} {festival.festival.name}</h2><p className="sub">{festival.festival.description || "Move freely from one activity to another. This festival hub disappears when the admin switches it off."}</p></div><button className="icon-btn" onClick={()=>setFestivalOpen(false)}>×</button></div>
         <div className="festival-roam">{festival.activities.map((a:any)=><div className="festival-card" key={a.id}><div className="room-icon">✨</div><div className="grow"><b>{a.name}</b><div className="room-meta">{a.category}{a.city?" · "+a.city:""}{a.capacity?" · "+a.capacity+" spots":""}</div><div className="sub">{a.description || "Join, explore and meet people through this festival activity."}</div></div><button className="join" onClick={()=>notify("Entered "+a.name)}>Enter</button></div>)}</div>
@@ -505,7 +583,7 @@ export default function Home() {
       </div></div>}
       {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
-        {nav.map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => setTab(id)}><span>{icon}</span>{label}</button>)}
+        {nav.map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
       </nav>
       {toast && <div role="status" style={{position:"fixed",left:"50%",bottom:84,transform:"translateX(-50%)",background:"#282326",color:"#fff",borderRadius:99,padding:"11px 15px",fontSize:12,zIndex:80}}>{toast}</div>}
     </div>
