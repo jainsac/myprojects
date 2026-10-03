@@ -210,11 +210,14 @@ export default function Home() {
         handleUploadUrl:"/api/profile/media/upload"
       });
       setProfileDraft((d:any)=>{
-        const arr=[...(d[group==="personality"?"personalityPrompts":"partnerPrompts"]||[])];
+        const key=group==="personality"?"personalityPrompts":"partnerPrompts";
+        const arr=[...(d[key]||[])];
         const item={...(arr[index]||{question:"",answer:""})};
-        item.media={kind,pathname:blob.pathname};
+        const media=[...(item.media||[])];
+        media.push({kind,pathname:blob.pathname});
+        item.media=media;
         arr[index]=item;
-        return {...d,[group==="personality"?"personalityPrompts":"partnerPrompts"]:arr};
+        return {...d,[key]:arr};
       });
       notify(kind==="photo"?"Photo attached to prompt":"Video attached to prompt");
     }catch(err){notify(err instanceof Error?err.message:"Could not upload prompt media");}
@@ -241,7 +244,9 @@ export default function Home() {
             const key=group==="personality"?"personalityPrompts":"partnerPrompts";
             const arr=[...(d[key]||[])];
             const item={...(arr[index]||{question:"",answer:""})};
-            item.media={kind:"voice",pathname:blobResult.pathname};
+            const media=[...(item.media||[])];
+            media.push({kind:"voice",pathname:blobResult.pathname});
+            item.media=media;
             arr[index]=item;
             return {...d,[key]:arr};
           });
@@ -612,12 +617,24 @@ export default function Home() {
             <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div></div><span className="score">{person.score||88}%</span></div>
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
             {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
-              const src=x.media?.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.media.pathname):"";
-              return <div className="prompt-card" key={"personality-"+i}><small>ABOUT ME</small><b>{x.question}</b><span>{x.answer}</span>{src&&<div className="prompt-card-media">{x.media.kind==="photo"?<img src={src} alt="Prompt photo"/>:x.media.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>}</div>
+              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
+              return <div className="prompt-card prompt-package" key={"personality-"+i}>
+                <small>ABOUT ME · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
+                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
+                })}</div>}
+              </div>
             })}
             {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
-              const src=x.media?.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.media.pathname):"";
-              return <div className="prompt-card partner-prompt" key={"partner-"+i}><small>WHAT I VALUE IN A PARTNER</small><b>{x.question}</b><span>{x.answer}</span>{src&&<div className="prompt-card-media">{x.media.kind==="photo"?<img src={src} alt="Prompt photo"/>:x.media.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>}</div>
+              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
+              return <div className="prompt-card partner-prompt prompt-package" key={"partner-"+i}>
+                <small>WHAT I VALUE IN A PARTNER · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
+                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
+                })}</div>}
+              </div>
             })}
             {Array.isArray(person.lifestylePreferences?.profileShowcase)&&person.lifestylePreferences.profileShowcase.slice(0,3).map((x:any,i:number)=>{
               const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
@@ -778,7 +795,7 @@ export default function Home() {
           <textarea className="field profile-textarea" placeholder="Short bio (tell people something real about you)" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})} minLength={10} required />
           <div className="profile-extended-grid"><input className="field" placeholder="State" value={profileDraft.state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value})}/><input className="field" placeholder="Food preference" value={profileDraft.foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value})}/><input className="field" placeholder="Company" value={profileDraft.company||""} onChange={e=>setProfileDraft({...profileDraft,company:e.target.value})}/><input className="field" placeholder="Profession" value={profileDraft.profession||""} onChange={e=>setProfileDraft({...profileDraft,profession:e.target.value})}/><input className="field" placeholder="Religion" value={profileDraft.religion||""} onChange={e=>setProfileDraft({...profileDraft,religion:e.target.value})}/><input className="field" placeholder="Community" value={profileDraft.community||""} onChange={e=>setProfileDraft({...profileDraft,community:e.target.value})}/><select className="field" value={profileDraft.diet||""} onChange={e=>setProfileDraft({...profileDraft,diet:e.target.value})}><option value="">Diet</option><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Jain</option><option>Non-vegetarian</option><option>Anything</option></select><select className="field" value={profileDraft.smoking||""} onChange={e=>setProfileDraft({...profileDraft,smoking:e.target.value})}><option value="">Smoking</option><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Drinking</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select><input className="field" placeholder="Relationship goal" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}/><input className="field" placeholder="Education" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}/><input className="field" placeholder="Children preference" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}/><input className="field" placeholder="Pets preference" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}/><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select><input className="field" placeholder="Language(s)" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}/><input className="field" inputMode="numeric" placeholder="Height (cm)" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value.replace(/\D/g,"")})}/></div><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
           <div className="filter-section-title">✨ Show your personality</div>
-          <p className="safe">Choose up to 3. Each prompt can have its own photo, video or voice note so your answer feels more real.</p>
+          <p className="safe">Choose up to 3. Build each one as a complete Prompt Story: a short caption plus any combination of photo, video and voice explanation. Use one or use all — your choice.</p>
           {[0,1,2].map((i:number)=>{
             const item=profileDraft.personalityPrompts?.[i]||{question:"",answer:""};
             const media=item.media;
@@ -798,7 +815,7 @@ export default function Home() {
                 <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"personality",i,"video");e.currentTarget.value=""}} /></label>
                 <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("personality",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="personality"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
               </div>
-              {media?.pathname&&<div className="prompt-media-added"><span>{media.kind==="photo"?"📸 Photo attached":media.kind==="video"?"🎥 Video attached":"🎙️ Voice note attached"}</span><button type="button" className="chip" onClick={()=>setItem({media:null})}>Remove</button></div>}
+              {Array.isArray(media)&&media.length>0&&<div className="prompt-media-added-list">{media.map((m:any,j:number)=><div className="prompt-media-added" key={m.pathname||j}><span>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"}</span><button type="button" className="chip" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>Remove</button></div>)}</div>}
             </div>
           })}
           <div className="filter-section-title">🎨 Profile-wide Personality Showcase</div>
@@ -821,7 +838,7 @@ export default function Home() {
             </div>
           </div>
           <div className="filter-section-title">❤️ What I value in a partner</div>
-          <p className="safe">These help Cuddl understand compatibility. You control what you reveal.</p>
+          <p className="safe">Build a complete Partner Story if you want: short text plus any combination of photo, video and voice. These help people understand the person behind the preference.</p>
           {[0,1,2].map((i:number)=>{
             const item=profileDraft.partnerPrompts?.[i]||{question:"",answer:""};
             const media=item.media;
@@ -841,7 +858,7 @@ export default function Home() {
                 <label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const file=e.target.files?.[0];if(file)uploadPromptMedia(file,"partner",i,"video");e.currentTarget.value=""}} /></label>
                 <button type="button" className={"prompt-media-btn "+(promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"recording":"")} onClick={()=>promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?stopPromptVoiceRecording():startPromptVoiceRecording("partner",i)} disabled={showcaseBusy}>{promptRecordingTarget?.group==="partner"&&promptRecordingTarget.index===i?"⏹ Stop":"🎙️ Voice"}</button>
               </div>
-              {media?.pathname&&<div className="prompt-media-added"><span>{media.kind==="photo"?"📸 Photo attached":media.kind==="video"?"🎥 Video attached":"🎙️ Voice note attached"}</span><button type="button" className="chip" onClick={()=>setItem({media:null})}>Remove</button></div>}
+              {Array.isArray(media)&&media.length>0&&<div className="prompt-media-added-list">{media.map((m:any,j:number)=><div className="prompt-media-added" key={m.pathname||j}><span>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"}</span><button type="button" className="chip" onClick={()=>setItem({media:media.filter((_:any,k:number)=>k!==j)})}>Remove</button></div>)}</div>}
             </div>
           })}
         </div>
