@@ -27,6 +27,8 @@ export async function PUT(request:Request){
       maritalStatus:body.maritalStatus===undefined?existing.maritalStatus:String(body.maritalStatus||"").trim().toUpperCase()||undefined,
       personalityPrompts:body.personalityPrompts===undefined?existing.personalityPrompts:Array.isArray(body.personalityPrompts)?body.personalityPrompts.filter((x:any)=>x?.question&&x?.answer).slice(0,3):existing.personalityPrompts,
       partnerPrompts:body.partnerPrompts===undefined?existing.partnerPrompts:Array.isArray(body.partnerPrompts)?body.partnerPrompts.filter((x:any)=>x?.question&&x?.answer).slice(0,3):existing.partnerPrompts,
+      profileShowcase:body.profileShowcase===undefined?existing.profileShowcase:Array.isArray(body.profileShowcase)?body.profileShowcase.filter((x:any)=>x?.kind&&x?.pathname).slice(0,8):existing.profileShowcase,
+      personalityStickers:body.personalityStickers===undefined?existing.personalityStickers:Array.isArray(body.personalityStickers)?body.personalityStickers.map(String).slice(0,8):existing.personalityStickers,
       foodPreference:body.foodPreference===undefined?existing.foodPreference:String(body.foodPreference||"").trim()||undefined,
       food:body.food===undefined?existing.food:String(body.food||"").trim()||undefined,
       diet:body.diet===undefined?existing.diet:String(body.diet||"").trim()||undefined,
