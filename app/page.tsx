@@ -137,6 +137,11 @@ export default function Home() {
     },4000);
     return ()=>window.clearInterval(timer);
   }, [user, chatMatch?.matchId]);
+  useEffect(() => {
+    if(!aiCoachEnabled || !chatMatch?.matchId || chatMessages.length < 4 || chatMessages.length % 8 !== 0) return;
+    requestAiChatCoach();
+  }, [chatMessages.length, aiCoachEnabled, chatMatch?.matchId]);
+
   async function markNotificationRead(id:string){
     setNotifications(current=>current.map(n=>n.id===id?{...n,read:true}:n));
     await fetch("/api/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
@@ -649,7 +654,6 @@ export default function Home() {
               <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.partnerPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,partnerPrompts:a})}} />
             </div>
           })}
-        </div>
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
         <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
