@@ -11,11 +11,14 @@ export async function POST(request:Request){
       body,
       request,
       onBeforeGenerateToken:async(pathname)=>{
-        const prefix=`verification/${current.user.id}/`;
-        if(!pathname.startsWith(prefix) || !pathname.endsWith(".jpg")) throw new Error("Invalid verification upload path.");
+        const verificationPrefix=`verification/${current.user.id}/`;
+        const profilePrefix=`profile-media/${current.user.id}/`;
+        const isVerification=pathname.startsWith(verificationPrefix) && pathname.endsWith(".jpg");
+        const isProfile=pathname.startsWith(profilePrefix);
+        if(!isVerification && !isProfile) throw new Error("Invalid upload path.");
         return {
-          allowedContentTypes:["image/jpeg"],
-          maximumSizeInBytes:3*1024*1024,
+          allowedContentTypes:isVerification?["image/jpeg"]:["image/jpeg","image/png","image/webp","audio/webm","audio/mp4","audio/mpeg","video/webm","video/mp4"],
+          maximumSizeInBytes:isVerification?3*1024*1024:25*1024*1024,
           addRandomSuffix:true,
           tokenPayload:JSON.stringify({userId:current.user.id})
         };
