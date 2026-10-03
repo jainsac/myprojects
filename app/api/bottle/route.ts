@@ -15,7 +15,7 @@ export async function GET(){
   const active=await db.execute(sql\`SELECT id,status,created_at,opened_at FROM bottles WHERE sender_id=\${current.user.id} AND status IN ('ACTIVE','OPENED') ORDER BY created_at DESC LIMIT 1\`);
   const month=await db.execute(sql\`SELECT COUNT(*)::int AS count FROM bottles WHERE sender_id=\${current.user.id} AND created_at>=date_trunc('month',now())\`);
   const opened=await db.execute(sql\`SELECT id,sender_id,content_text,media,status,created_at,opened_at FROM bottles WHERE receiver_id=\${current.user.id} AND status='OPENED' ORDER BY opened_at DESC LIMIT 20\`);
-  return NextResponse.json({plan:ent,limits:{PRO:Number(s.pro_monthly_limit),PREMIUM:Number(s.premium_monthly_limit)},usedThisMonth:Number((month as any).rows?.[0]?.count||0),active:(active as any).rows?.[0]||null,opened:(opened as any).rows||[],settings:{openTimeoutDays:Number(s.open_timeout_days||30)}});
+  return NextResponse.json({plan:ent,limits:{PRO:Number(s.pro_monthly_limit),PREMIUM:Number(s.premium_monthly_limit)},usedThisMonth:Number((month as any).rows?.[0]?.count||0),active:(active as any).rows?.[0]||null,incoming:(incoming as any).rows?.[0]||null,opened:(opened as any).rows||[],settings:{openTimeoutDays:Number(s.open_timeout_days||30)}});
 }
 export async function POST(request:Request){
   await ensureRewardsSchema();
@@ -36,4 +36,26 @@ export async function POST(request:Request){
   if(!receiver)return NextResponse.json({error:"No eligible bottle recipient is available right now."},{status:409});
   const created=await db.execute(sql\`INSERT INTO bottles(sender_id,receiver_id,content_text,media,status,expires_at) VALUES(\${current.user.id},\${receiver},\${text||null},\${JSON.stringify(media)}::jsonb,'ACTIVE',now()+make_interval(days=>\${Number(s?.open_timeout_days||30)})) RETURNING id,status,created_at,expires_at\`);
   return NextResponse.json({ok:true,bottle:(created as any).rows?.[0]});
+}
+export async function PATCH(request:Request){
+  await ensureRewardsSchema();
+  const current=await getCurrentUser(); if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
+  const body=await request.json(); const action=String(body.action||""); const id=String(body.id||""); const db=getDb();
+  const q=await db.execute(sql`SELECT * FROM bottles WHERE id=${id} AND receiver_id=${current.user.id} AND status='ACTIVE' LIMIT 1`);
+  const bottle=(q as any).rows?.[0]; if(!bottle)return NextResponse.json({error:"Bottle is unavailable or already opened."},{status:404});
+  if(action==="open"){
+    await db.execute(sql`UPDATE bottles SET status='OPENED',opened_at=now(),opened_action='OPENED' WHERE id=${id}`);
+    return NextResponse.json({ok:true,bottle:{id:bottle.id,senderId:bottle.sender_id,text:bottle.content_text,media:bottle.media||[]},message:"Bottle opened. You can decide whether to connect."});
+  }
+  if(action==="connect"){
+    await db.execute(sql`UPDATE bottles SET status='OPENED',opened_at=COALESCE(opened_at,now()),opened_action='CONNECT',connection_requested=true WHERE id=${id}`);
+    await db.execute(sql`INSERT INTO sparks(from_user_id,to_user_id,status,message) VALUES(${current.user.id},${bottle.sender_id},'pending','Message in a Bottle connection request')`);
+    return NextResponse.json({ok:true,connected:true});
+  }
+  if(action==="pass"||action==="report"){
+    await db.execute(sql`UPDATE bottles SET status='OPENED',opened_at=now(),opened_action=${action.toUpperCase()} WHERE id=${id}`);
+    if(action==="report")await db.execute(sql`INSERT INTO reports(reporter_id,reported_user_id,category,details) VALUES(${current.user.id},${bottle.sender_id},'bottle','Reported Message in a Bottle')`);
+    return NextResponse.json({ok:true});
+  }
+  return NextResponse.json({error:"Unknown bottle action."},{status:400});
 }
