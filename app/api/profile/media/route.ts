@@ -6,8 +6,7 @@ export async function GET(request:Request){
   const current=await getCurrentUser();
   if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
   const pathname=new URL(request.url).searchParams.get("pathname")||"";
-  const prefix=`profile-media/${current.user.id}/`;
-  if(!pathname.startsWith(prefix)) return NextResponse.json({error:"Invalid media path."},{status:400});
+  if(!pathname.startsWith("profile-media/")) return NextResponse.json({error:"Invalid media path."},{status:400});
   try{
     const result=await get(pathname,{access:"private"});
     if(!result)return NextResponse.json({error:"Media not found."},{status:404});
