@@ -76,7 +76,7 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],profileShowcase:[],personalityStickers:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:"",qualification:""});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],profileShowcase:[],personalityStickers:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",languages:[],heightCm:"",qualification:""});
   const profileStates=["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh"];
   const profileLanguages=["Hindi","English","Bengali","Telugu","Marathi","Tamil","Urdu","Gujarati","Kannada","Odia","Malayalam","Punjabi","Assamese","Maithili","Sanskrit","Kashmiri","Nepali","Konkani","Sindhi","Dogri","Manipuri","Bodo","Santali","French","German","Spanish","Italian","Portuguese","Russian","Arabic","Chinese","Japanese","Korean","Other"];
   const profileQualifications=["10th / Secondary","12th / Higher Secondary","ITI / Vocational","Diploma","B.A.","B.Com.","B.Sc.","B.Tech / B.E.","BBA","BCA","MBBS","BDS","LLB","B.Ed.","B.Pharm","M.A.","M.Com.","M.Sc.","M.Tech / M.E.","MBA","MCA","MD / MS","LLM","M.Ed.","Ph.D.","Other"];
@@ -205,7 +205,7 @@ export default function Home() {
   }
   async function openBottleCenter(){setBottleOpen(true);await loadBottle();}
   async function addBottleMedia(file:File,kind:"photo"|"video"){
-    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    const max=kind==="photo"?5*1024*1024:50*1024*1024;
     if(file.size>max){notify(`Keep ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
     setBottleBusy(true);
     try{
@@ -229,7 +229,7 @@ export default function Home() {
     setOnboardingPromptOpen(false);
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts.map((x:any)=>({...x})):[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts.map((x:any)=>({...x})):[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),qualification:String(lp.qualification||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||""),locationGranted:!!lp.locationGranted,locationLatitude:String(lp.locationLatitude||""),locationLongitude:String(lp.locationLongitude||""),locationAccuracy:String(lp.locationAccuracy||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts.map((x:any)=>({...x})):[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts.map((x:any)=>({...x})):[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),qualification:String(lp.qualification||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),languages:Array.isArray(lp.languages)?lp.languages.map(String):(lp.language?[String(lp.language)]:[]),heightCm:String(lp.heightCm||""),locationGranted:!!lp.locationGranted,locationLatitude:String(lp.locationLatitude||""),locationLongitude:String(lp.locationLongitude||""),locationAccuracy:String(lp.locationAccuracy||"")});
     setProfileModal("edit");
   }
   async function requestAiChatCoach(){
@@ -253,7 +253,9 @@ export default function Home() {
       const ext=(file.name.split(".").pop()||"webm").toLowerCase();
       const blob=await upload(`profile-media/${user?.user?.id||user?.id}/prompt-${group}-${index}-${kind}-${Date.now()}.${ext}`,file,{
         access:"private",
-        handleUploadUrl:"/api/profile/media/upload"
+        handleUploadUrl:"/api/profile/media/upload",
+        contentType:file.type,
+        multipart:kind==="video" && file.size>4*1024*1024
       });
       setProfileDraft((d:any)=>{
         const key=group==="personality"?"personalityPrompts":"partnerPrompts";
@@ -399,7 +401,7 @@ export default function Home() {
       setProfileOnboarding(!complete);
       setOnboardingPromptOpen(false);
       setProfileModal(complete?null:"edit");
-      if(complete){setTab("discover");setPermissionsOpen(true);notify("Profile complete — finish your privacy & permission setup");} else notify("Please complete the required profile details, including marital status");
+      if(complete){setTab("discover");notify("Profile saved successfully");} else notify("Please complete the required profile details, including marital status");
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
     finally{setProfileSaving(false);}
   }
@@ -912,7 +914,17 @@ export default function Home() {
             <div className="profile-field-group"><label>Children preference</label><select className="field" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}><option value="">Select preference</option>{profileChildren.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Pets preference</label><select className="field" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}><option value="">Select preference</option>{profilePets.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Exercise</label><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Select exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select></div>
-            <div className="profile-field-group"><label>Language</label><select className="field" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}><option value="">Select language</option>{profileLanguages.map(x=><option key={x}>{x}</option>)}</select></div>
+            <div className="profile-field-group"><label>Languages</label>
+  <div className="language-picker">
+    <div className="language-selected">{(profileDraft.languages||[]).length ? (profileDraft.languages||[]).join(", ") : "Select one or more languages"}</div>
+    <div className="language-options">
+      {profileLanguages.map(x=>{const selected=(profileDraft.languages||[]).includes(x);return <label className={"language-option "+(selected?"selected":"")} key={x}>
+        <input type="checkbox" checked={selected} onChange={()=>setProfileDraft((d:any)=>{const current=Array.isArray(d.languages)?d.languages:[];const next=selected?current.filter((v:string)=>v!==x):[...current,x];return {...d,languages:next,language:next[0]||""};})}/>
+        <span>{x}</span>
+      </label>})}
+    </div>
+  </div>
+</div>
             <div className="profile-field-group"><label>Height</label><select className="field" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value})}><option value="">Select height</option>{profileHeights.map(x=><option key={x} value={x}>{x} cm</option>)}</select></div>
             <div className="profile-field-group"><label>Gender</label><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select></div>
             <div className="profile-field-group"><label>Who you want to meet</label><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
@@ -1015,17 +1027,6 @@ export default function Home() {
         <input className="field" type="email" autoComplete="email" placeholder="you@example.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)}/>
         <button className="btn" onClick={()=>{setForgotOpen(false);notify(forgotEmail.trim()?"Reset email flow is pending email setup":"Enter your registered email")}}>Continue</button>
         <button className="btn ghost" onClick={()=>setForgotOpen(false)}>Close</button>
-      </div></div>}
-      {permissionsOpen && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
-        <div className="eyebrow">Privacy & permissions setup</div><h2>One last setup before you discover.</h2>
-        <p className="sub">Cuddl asks only for permissions used by a feature. Location is required for distance-based discovery. Camera and microphone are requested when you use verification or voice features. Notifications are optional.</p>
-        <div className="permission-card"><div><b>📍 Location · Required for discovery</b><span>{locationGranted?"Enabled":"Use approximate/foreground location for distance discovery; precise location is not shown to other members."}</span></div><button className="btn" onClick={requestLocation} disabled={locationBusy||locationGranted}>{locationGranted?"Enabled ✓":locationBusy?"Requesting…":"Enable"}</button></div>
-        <div className="permission-card"><div><b>🔔 Notifications · Recommended</b><span>{notificationPermission==="granted"?"Enabled":"Match, message and safety updates. You can change this anytime."}</span></div><button className="btn ghost" onClick={requestNotifications} disabled={notificationPermission==="granted"||notificationPermission==="denied"}>{notificationPermission==="granted"?"Enabled ✓":notificationPermission==="denied"?"Blocked":"Enable"}</button></div>
-        <div className="permission-card"><div><b>🖼️ Photos & videos · Device media</b><span>Used only when you choose media for your profile or a Prompt Story. Cuddl cannot browse your gallery in the background. Your browser/device shows the file or media picker when you select an item.</span></div><button className="btn ghost" onClick={()=>{setPermissionsOpen(false);setProfileModal("edit");}}>Add media</button></div>
-        <div className="permission-card"><div><b>📷 Camera & 🎙️ microphone · Contextual</b><span>Camera is requested when you capture verification/profile video. Microphone is requested when you record a voice note or video with audio.</span></div><button className="btn ghost" onClick={async()=>{try{const s=await navigator.mediaDevices?.getUserMedia({audio:true,video:true});s?.getTracks().forEach(t=>t.stop());notify("Camera & microphone permission checked");}catch(e){notify("Camera/microphone permission was not granted")}}}>Test camera & mic</button></div>
-        <div className="safe">We do not request broad contacts access or background location just for convenience. You can manage permissions from your device/browser settings.</div>
-        <button className="btn" disabled={!locationGranted} onClick={()=>setPermissionsOpen(false)}>{locationGranted?"Continue to Cuddl":"Enable location to continue"}</button>
-        <button className="btn ghost" onClick={()=>setPermissionsOpen(false)}>Close</button>
       </div></div>}
       {profileOnboarding && onboardingChecked && onboardingPromptOpen && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
         <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
