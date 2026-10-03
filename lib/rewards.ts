@@ -95,8 +95,8 @@ export function ensureRewardsSchema(){
       );
       CREATE INDEX IF NOT EXISTS bottles_sender_status_idx ON bottles(sender_id,status);
       CREATE INDEX IF NOT EXISTS bottles_receiver_status_idx ON bottles(receiver_id,status);
-    \`);
-    await db.execute(sql`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING\`);
+    `);
+    await db.execute(sql`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
   })();
   return ready;
 }
