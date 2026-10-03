@@ -11,6 +11,14 @@ export async function PUT(request:Request){
     const body=await request.json();
     const displayName=String(body.displayName??current.profile?.displayName??"").trim();
     if(!displayName)return NextResponse.json({error:"Display name is required."},{status:400});
+    const existing=(current.profile?.lifestylePreferences || {}) as Record<string,unknown>;
+    const lifestylePreferences={
+      ...existing,
+      company:String(body.company??existing.company??"").trim(),
+      profession:String(body.profession??existing.profession??"").trim(),
+      religion:String(body.religion??existing.religion??"").trim(),
+      community:String(body.community??existing.community??"").trim(),
+    };
     const db=getDb();
     const [profile]=await db.update(profiles).set({
       displayName,
@@ -18,6 +26,7 @@ export async function PUT(request:Request){
       bio:body.bio===undefined?current.profile?.bio??null:String(body.bio).trim()||null,
       communicationStyle:body.communicationStyle===undefined?current.profile?.communicationStyle??null:String(body.communicationStyle).trim()||null,
       relationshipGoals:Array.isArray(body.relationshipGoals)?body.relationshipGoals.map(String):current.profile?.relationshipGoals??[],
+      lifestylePreferences,
       updatedAt:new Date(),
     }).where(eq(profiles.userId,current.user.id)).returning();
     return NextResponse.json({ok:true,profile});
