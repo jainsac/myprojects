@@ -7,8 +7,8 @@ export function ensureRewardsSchema(){
   if(ready)return ready;
   ready=(async()=>{
     const db=getDb();
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS referral_settings (
+    const statements=[
+      sql`CREATE TABLE IF NOT EXISTS referral_settings (
         id integer PRIMARY KEY DEFAULT 1,
         enabled boolean NOT NULL DEFAULT true,
         reward_type text NOT NULL DEFAULT 'PLAN_EXTENSION',
@@ -16,13 +16,13 @@ export function ensureRewardsSchema(){
         qualification_event text NOT NULL DEFAULT 'PROFILE_COMPLETE',
         max_rewards_per_user integer NOT NULL DEFAULT 20,
         updated_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS referral_codes (
+      )`,
+      sql`CREATE TABLE IF NOT EXISTS referral_codes (
         user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         code text NOT NULL UNIQUE,
         created_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS referrals (
+      )`,
+      sql`CREATE TABLE IF NOT EXISTS referrals (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         referrer_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         referred_id uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -31,9 +31,9 @@ export function ensureRewardsSchema(){
         qualification_event text,
         qualified_at timestamptz,
         created_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS referrals_referrer_idx ON referrals(referrer_id);
-      CREATE TABLE IF NOT EXISTS reward_ledger (
+      )`,
+      sql`CREATE INDEX IF NOT EXISTS referrals_referrer_idx ON referrals(referrer_id)`,
+      sql`CREATE TABLE IF NOT EXISTS reward_ledger (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         source_type text NOT NULL,
@@ -42,8 +42,8 @@ export function ensureRewardsSchema(){
         reward_value jsonb NOT NULL DEFAULT '{}'::jsonb,
         status text NOT NULL DEFAULT 'CREDITED',
         created_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS offer_codes (
+      )`,
+      sql`CREATE TABLE IF NOT EXISTS offer_codes (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         code text NOT NULL UNIQUE,
         enabled boolean NOT NULL DEFAULT true,
@@ -59,28 +59,24 @@ export function ensureRewardsSchema(){
         starts_at timestamptz,
         ends_at timestamptz,
         created_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS offer_redemptions (
+      )`,
+      sql`CREATE TABLE IF NOT EXISTS offer_redemptions (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         offer_id uuid NOT NULL REFERENCES offer_codes(id) ON DELETE CASCADE,
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         purchase_reference text,
         discount_amount numeric NOT NULL DEFAULT 0,
         created_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS offer_redemptions_user_idx ON offer_redemptions(user_id);
-    `);
-    await db.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id uuid REFERENCES users(id) ON DELETE CASCADE`);
-    await db.execute(sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS bottle_settings (
+      )`,
+      sql`CREATE INDEX IF NOT EXISTS offer_redemptions_user_idx ON offer_redemptions(user_id)`,
+      sql`CREATE TABLE IF NOT EXISTS bottle_settings (
         id integer PRIMARY KEY DEFAULT 1,
         pro_monthly_limit integer NOT NULL DEFAULT 2,
         premium_monthly_limit integer NOT NULL DEFAULT 5,
         open_timeout_days integer NOT NULL DEFAULT 30,
         updated_at timestamptz NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS bottles (
+      )`,
+      sql`CREATE TABLE IF NOT EXISTS bottles (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         sender_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         receiver_id uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -92,11 +88,14 @@ export function ensureRewardsSchema(){
         expires_at timestamptz,
         opened_action text,
         connection_requested boolean NOT NULL DEFAULT false
-      );
-      CREATE INDEX IF NOT EXISTS bottles_sender_status_idx ON bottles(sender_id,status);
-      CREATE INDEX IF NOT EXISTS bottles_receiver_status_idx ON bottles(receiver_id,status);
-    `);
-    await db.execute(sql`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+      )`,
+      sql`CREATE INDEX IF NOT EXISTS bottles_sender_status_idx ON bottles(sender_id,status)`,
+      sql`CREATE INDEX IF NOT EXISTS bottles_receiver_status_idx ON bottles(receiver_id,status)`,
+      sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+      sql`INSERT INTO bottle_settings(id) VALUES (1) ON CONFLICT(id) DO NOTHING`
+    ];
+    for(const statement of statements) await db.execute(statement);
   })();
+  ready=ready.catch(error=>{ready=null;throw error;});
   return ready;
 }
