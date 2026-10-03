@@ -138,3 +138,11 @@
  .prompt-media-tools{display:grid;grid-template-columns:1fr 1fr 1fr}
  .prompt-media-btn{width:100%;padding:0 5px}
 }
+
+.prompt-package{padding-bottom:12px}
+.prompt-package-media{display:grid;gap:8px;margin-top:10px}
+.prompt-package-item{overflow:hidden;border-radius:13px;background:#f8f1f2;border:1px solid #f0dfe2}
+.prompt-package-item img,.prompt-package-item video{display:block;width:100%;max-height:330px;object-fit:cover}
+.prompt-package-item audio{display:block;width:calc(100% - 12px);margin:6px}
+.prompt-media-added-list{display:grid;gap:6px}
+.prompt-media-added-list .prompt-media-added{margin:0}
