@@ -41,7 +41,7 @@ export async function PUT(request:Request){
       children:body.children===undefined?existing.children:String(body.children||"").trim()||undefined,
       pets:body.pets===undefined?existing.pets:String(body.pets||"").trim()||undefined,
       exercise:body.exercise===undefined?existing.exercise:String(body.exercise||"").trim()||undefined,
-      languages:body.languages===undefined?existing.languages:(Array.isArray(body.languages)?body.languages.map(String).map(x=>x.trim()).filter(Boolean).slice(0,10):existing.languages),
+      languages:body.languages===undefined?existing.languages:(Array.isArray(body.languages)?body.languages.map(String).map((x:string)=>x.trim()).filter(Boolean).slice(0,10):existing.languages),
       language:body.language===undefined?(Array.isArray(body.languages)&&body.languages.length?String(body.languages[0]).trim():existing.language):String(body.language||"").trim()||undefined,
       heightCm:body.heightCm===undefined?existing.heightCm:Number(body.heightCm)||undefined,
       verified:body.verified===undefined?existing.verified:!!body.verified,
