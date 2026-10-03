@@ -24,7 +24,7 @@ jobs:
 # Keep the master push as a real Git event for the connected Vercel project.
 # Vercel production deploys from master.
 # Verify the latest Cuddl source before deployment.
-# Final deployment trigger (merge, JSX fix): 2026-10-03T18:08:49.518Z
+# Final deployment trigger (merge, JSX and tab typing fixes): 2026-10-03T18:11:00Z
 
       - name: Vercel production fallback deploy
         if: success() && env.VERCEL_TOKEN != ''
