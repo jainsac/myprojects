@@ -90,6 +90,7 @@ export default function Home() {
   relationshipGoal:"",education:"",children:"",pets:"",exercise:"",language:"",heightMin:"",heightMax:"",verified:"",photos:""
 });
   const [profileOnboarding, setProfileOnboarding] = useState(false);
+  const [onboardingPromptOpen, setOnboardingPromptOpen] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [locationBusy, setLocationBusy] = useState(false);
@@ -112,6 +113,7 @@ export default function Home() {
     setDesiredGender(String(prefs.desiredGender||"ANY").toUpperCase());
     const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.state && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10 && !!prefs.maritalStatus;
     setProfileOnboarding(!complete);
+    setOnboardingPromptOpen(!complete);
     setOnboardingChecked(true);
   }, [user]);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
@@ -174,9 +176,10 @@ export default function Home() {
   const passwordChecks = useMemo(() => ({length: authForm.password.length >= 8, upper: /[A-Z]/.test(authForm.password), lower: /[a-z]/.test(authForm.password), number: /[0-9]/.test(authForm.password), special: /[^A-Za-z0-9]/.test(authForm.password)}), [authForm.password]);
   const passwordValid = Object.values(passwordChecks).every(Boolean);
   const passwordStrength = authForm.password.length===0 ? "" : Object.values(passwordChecks).filter(Boolean).length <= 2 ? "Weak" : Object.values(passwordChecks).filter(Boolean).length < 5 ? "Medium" : "Strong";
-  async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); if(authMode==="register"){setProfileOnboarding(true);setTab("discover");} } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
+  async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); if(authMode==="register"){setProfileOnboarding(true);setOnboardingPromptOpen(true);setTab("discover");} } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function saveDiscoveryPreference(value:string){ setDesiredGender(value); setGenderSaving(true); try { const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({desiredGender:value})}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not save preference"); setUser((current:any)=>current?{...current,profile:d.profile}:current); const a=await fetch("/api/discover",{cache:"no-store"}); const ad=await a.json(); if(Array.isArray(ad.profiles)) { setDiscoverProfiles(ad.profiles); setIndex(0); setPhotoIndexes({}); } notify(value==="ANY"?"Showing all genders":"Showing "+value.toLowerCase().replace("_"," ")+" profiles"); } catch(err){ notify(err instanceof Error?err.message:"Could not save preference"); } finally { setGenderSaving(false); } }
   function openProfileEditor(){
+    setOnboardingPromptOpen(false);
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
     setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts:[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts:[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
@@ -258,6 +261,7 @@ export default function Home() {
       const lp=d.profile?.lifestylePreferences||{};
       const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.state && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10 && !!lp.maritalStatus;
       setProfileOnboarding(!complete);
+      setOnboardingPromptOpen(false);
       setProfileModal(complete?null:"edit");
       if(complete){setTab("discover");setPermissionsOpen(true);notify("Profile complete — finish your privacy & permission setup");} else notify("Please complete the required profile details, including marital status");
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
@@ -742,7 +746,7 @@ export default function Home() {
           })}
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
-        <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
+        <button className="btn ghost" onClick={()=>{setProfileModal(null);if(profileOnboarding)setOnboardingPromptOpen(true);}}>Close</button>
       </div></div>}
       {profileModal==="privacy" && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Privacy controls</div><h2>Control what you share.</h2>
@@ -773,7 +777,7 @@ export default function Home() {
         <button className="btn" disabled={!locationGranted} onClick={()=>setPermissionsOpen(false)}>{locationGranted?"Continue to Cuddl":"Enable location to continue"}</button>
         <button className="btn ghost" onClick={()=>setPermissionsOpen(false)}>Close</button>
       </div></div>}
-      {profileOnboarding && onboardingChecked && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
+      {profileOnboarding && onboardingChecked && onboardingPromptOpen && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
         <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
         <p className="sub">Cuddl will take you to profile search only after these basic details are completed. This prevents browsing other members with an unfinished profile.</p>
         <div className="verification-list"><div>✓ Profile name</div><div>✓ City & state</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div></div>
