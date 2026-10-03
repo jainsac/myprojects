@@ -250,7 +250,7 @@ export default function Home() {
       return true;
     });
   }, [discoverProfiles,matchFilters,user]);
-  const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : null, [index, searchableProfiles]);
+  const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : {displayName:"",name:"",age:0,city:"",initial:"",tags:[],score:0,bio:"",lifestylePreferences:{}}, [index, searchableProfiles]);
   const personPhotos = useMemo(() => {
     const p:any=person||{};
     const lp=p.lifestylePreferences||{};
