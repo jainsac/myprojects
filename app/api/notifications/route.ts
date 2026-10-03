@@ -3,8 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/auth";
 import { getDb } from "../../../lib/db";
 import { notifications, notificationReads } from "../../../lib/db/schema";
+import { ensureRewardsSchema } from "../../../lib/rewards";
 
 export async function GET(){
+  await ensureRewardsSchema();
   const current=await getCurrentUser();
   if(!current) return NextResponse.json({authenticated:false,notifications:[]});
   const db=getDb();
