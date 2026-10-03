@@ -450,7 +450,7 @@ export default function Home() {
               {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
               {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
             </div>
-            <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · Active today</div></div><span className="score">{person.score||88}%</span></div>
+            <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div></div><span className="score">{person.score||88}%</span></div>
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
             <div className="detail-grid">
               <div><small>Company</small><b>{person.lifestylePreferences?.company||"—"}</b></div>
