@@ -52,7 +52,7 @@ export async function GET() {
   if (blockedIds.length) conditions.push(notInArray(users.id, blockedIds));
 
   const rows = await db.select({
-    id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio,
+    id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio, dateOfBirth: profiles.dateOfBirth,
     avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals, lifestylePreferences: profiles.lifestylePreferences,
   }).from(users).innerJoin(profiles, eq(profiles.userId, users.id)).where(and(...conditions)).limit(30);
 
