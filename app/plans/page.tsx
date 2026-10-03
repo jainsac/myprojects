@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 
 type Plan={
   name:string; tag:string; copy:string; benefits:string[];
@@ -87,17 +88,35 @@ function actionPriority(plan:string){
 }
 
 export default function Plans(){
+  const [selectedPlan,setSelectedPlan]=useState("Plus");
+  const [offerCode,setOfferCode]=useState("");
+  const [offer,setOffer]=useState<any>(null);
+  const [offerError,setOfferError]=useState("");
+  const [offerBusy,setOfferBusy]=useState(false);
+  async function applyOffer(){
+    setOfferBusy(true);setOfferError("");setOffer(null);
+    try{const r=await fetch("/api/offers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:offerCode,plan:selectedPlan})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not apply offer");setOffer(d);}
+    catch(e){setOfferError(e instanceof Error?e.message:"Could not apply offer");}finally{setOfferBusy(false);}
+  }
   return <main className="policy-page">
     <a href="/" className="policy-back">← Back to Cuddl</a>
     <div className="eyebrow">Cuddl plans</div><h1>Plans & Premium</h1>
     <p className="sub">Choose a plan and billing period. Boost, message and Super Spark allowances reset each calendar subscription month; unused monthly allowances do not carry forward into later months.</p>
+    <section className="panel offer-code-panel">
+      <div className="eyebrow">Have an offer?</div><h2>🎟️ Apply an offer code</h2>
+      <p className="sub">Select the plan you want to buy, enter your code and validate it before checkout.</p>
+      <div className="admin-grid"><select className="field" value={selectedPlan} onChange={e=>{setSelectedPlan(e.target.value);setOffer(null);setOfferError("");}}>{plans.filter(p=>p.name!=="Basic").map(p=><option key={p.name}>{p.name}</option>)}</select><input className="field" placeholder="Offer / coupon code" value={offerCode} onChange={e=>setOfferCode(e.target.value.toUpperCase())}/></div>
+      <button className="btn" onClick={applyOffer} disabled={offerBusy||!offerCode}>{offerBusy?"Checking…":"Apply code"}</button>
+      {offer&&<div className="safe">✓ Code valid · {offer.discountType==="PERCENT"?offer.discountValue+"% off":"₹"+offer.discountValue+" off"}{offer.rewardType&&offer.rewardType!=="DISCOUNT"?" · "+offer.rewardType:""}</div>}
+      {offerError&&<div className="auth-error">{offerError}</div>}
+    </section>
     <div className="plan-grid">
       {plans.map(plan=><section className={"plan-card "+(plan.highlight?"plan-highlight":"")} key={plan.name}>
         <div className="eyebrow">{plan.name}</div><h2>{plan.tag}</h2><p>{plan.copy}</p>
         <div className="plan-prices">{plan.prices.map(([period,price])=><div key={period}><span>{period}</span><b>{price}</b></div>)}</div>
         <ul className="plan-benefits">{plan.benefits.map(x=><li key={x}>✓ {x}</li>)}</ul>
         <div className="safe"><b>Action priority:</b> {actionPriority(plan.name)}. If two users on the same plan perform the same eligible action, compatibility score is used as the tie-breaker.</div>
-        <button className="btn" onClick={()=>alert(plan.name==="Basic"?"Basic is free.":plan.name+" checkout is not connected in this test build.")}>{plan.name==="Basic"?"Current plan":"Choose "+plan.name}</button>
+        <button className="btn" onClick={()=>{setSelectedPlan(plan.name);alert(plan.name==="Basic"?"Basic is free.":"Checkout gateway is not connected in this test build. Apply your offer code above before checkout.");}}>{plan.name==="Basic"?"Current plan":"Choose "+plan.name}</button>
       </section>)}
     </div>
     <section className="policy-section">
