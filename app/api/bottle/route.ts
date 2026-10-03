@@ -8,6 +8,7 @@ export async function GET(){
   await ensureRewardsSchema();
   const current=await getCurrentUser(); if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
   const db=getDb();
+  await db.execute(sql`UPDATE bottles SET status='EXPIRED',opened_at=COALESCE(opened_at,now()),opened_action='EXPIRED' WHERE status='ACTIVE' AND expires_at IS NOT NULL AND expires_at<=now()`);
   const settings=await db.execute(sql\`SELECT * FROM bottle_settings WHERE id=1\`);
   const s=(settings as any).rows?.[0]||{pro_monthly_limit:2,premium_monthly_limit:5,open_timeout_days:30};
   const plan=String((current.profile?.lifestylePreferences as any)?.plan||"BASIC").toUpperCase();
@@ -21,6 +22,7 @@ export async function POST(request:Request){
   await ensureRewardsSchema();
   const current=await getCurrentUser(); if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
   const body=await request.json(); const db=getDb();
+  await db.execute(sql`UPDATE bottles SET status='EXPIRED',opened_at=COALESCE(opened_at,now()),opened_action='EXPIRED' WHERE status='ACTIVE' AND expires_at IS NOT NULL AND expires_at<=now()`);
   const plan=String((current.profile?.lifestylePreferences as any)?.plan||"BASIC").toUpperCase();
   if(plan!=="PRO"&&plan!=="PREMIUM")return NextResponse.json({error:"Message in a Bottle is available on Pro and Premium plans."},{status:403});
   const settings=await db.execute(sql\`SELECT * FROM bottle_settings WHERE id=1\`); const s=(settings as any).rows?.[0];
