@@ -59,10 +59,11 @@ export async function GET() {
   const sent = await db.select({ toUserId: sparks.toUserId }).from(sparks).where(eq(sparks.fromUserId, current.user.id));
   const sentIds = new Set(sent.map(x => x.toUserId));
 
+  const calculateAge=(dob:any)=>{if(!dob)return undefined;const d=new Date(dob);if(Number.isNaN(d.getTime()))return undefined;const now=new Date();let age=now.getFullYear()-d.getFullYear();const m=now.getMonth()-d.getMonth();if(m<0||(m===0&&now.getDate()<d.getDate()))age--;return age>0?age:undefined;};
   const realProfiles = rows.filter(x => !sentIds.has(x.id)).map((profile) => {
     const existing = profile.lifestylePreferences && typeof profile.lifestylePreferences === "object"
       ? profile.lifestylePreferences as Record<string, unknown> : {};
-    return { ...profile, lifestylePreferences: existing };
+    return { ...profile, age:calculateAge(profile.dateOfBirth), lifestylePreferences: existing };
   });
 
   const test = testProfiles.map(p => ({
