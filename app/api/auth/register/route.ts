@@ -19,8 +19,12 @@ export async function POST(request:Request){
     const governmentIdType=String(body.governmentIdType||"").trim().toUpperCase();
     const governmentIdLast4=String(body.governmentIdLast4||"").replace(/\D/g,"").slice(-4);
 
-    if(!emailPattern.test(email)||password.length<8||!displayName||!legalName||!phonePattern.test(phone)){
-      return NextResponse.json({error:"Display name, legal name, valid phone, email and password (8+ characters) are required."},{status:400});
+    const passwordChecks={length:password.length>=8,upper:/[A-Z]/.test(password),lower:/[a-z]/.test(password),number:/[0-9]/.test(password),special:/[^A-Za-z0-9]/.test(password)};
+    if(!emailPattern.test(email)||!displayName||!legalName||!phonePattern.test(phone)){
+      return NextResponse.json({error:"Please check your profile details, phone number and email address."},{status:400});
+    }
+    if(!Object.values(passwordChecks).every(Boolean)){
+      return NextResponse.json({error:"Password must be at least 8 characters and include an uppercase letter, lowercase letter, number and special character."},{status:400});
     }
     if(!["AADHAAR","PAN","PASSPORT","DRIVING_LICENSE","VOTER_ID","OTHER"].includes(governmentIdType) || governmentIdLast4.length!==4){
       return NextResponse.json({error:"Government ID type and its last 4 digits are required."},{status:400});
