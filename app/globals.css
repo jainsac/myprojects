@@ -161,3 +161,40 @@
 .bottle-media-grid img,.bottle-media-grid video{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:14px}
 .bottle-media-grid audio{display:block;width:100%}
 @media(max-width:600px){.bottle-upload-row{grid-template-columns:1fr 1fr 1fr}.bottle-ocean{font-size:24px;letter-spacing:2px}}
+
+
+/* Mobile-app profile editor: single-column, full-width layout */
+.profile-editor-page{width:100vw;max-width:100vw;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.profile-editor-inner{width:min(540px,100%);max-width:540px;min-width:0;padding:16px 14px 112px;overflow-x:hidden}
+.profile-editor-header{width:100%;min-width:0}
+.profile-editor-header>div{min-width:0}
+.profile-editor-header .sub{max-width:none}
+.profile-editor-inner>.auth-form{display:flex;flex-direction:column;gap:9px;width:100%;min-width:0}
+.profile-editor-inner .field{width:100%;max-width:100%;min-width:0}
+.profile-extended-grid{display:flex;flex-direction:column;gap:9px;width:100%;margin:0}
+.profile-row{display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%}
+.profile-row .field{flex:0 0 auto}
+.profile-location-card{width:100%;min-width:0}
+.profile-location-card>div{min-width:0}
+.profile-editor-inner>.btn{width:100%;max-width:100%;margin-top:8px}
+.showcase-upload-grid{grid-template-columns:1fr}
+.prompt-media-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.prompt-media-btn{width:100%;min-width:0;padding:0 6px}
+@media(max-width:600px){
+  .profile-editor-page{inset:0;width:100vw;height:100dvh}
+  .profile-editor-inner{width:100%;max-width:540px;padding:12px 14px calc(96px + env(safe-area-inset-bottom))}
+  .profile-editor-header{padding:2px 0 12px;margin-bottom:10px}
+  .profile-editor-header h2{font-size:24px}
+  .profile-editor-header .sub{font-size:12px;line-height:1.4}
+  .profile-editor-header .icon-btn{width:38px;height:38px;flex:none}
+  .profile-editor-inner>.auth-form{gap:8px}
+  .profile-editor-inner .field{height:48px;border-radius:15px}
+  .profile-editor-inner .profile-textarea{height:84px}
+  .profile-location-card{padding:12px;border-radius:17px}
+  .profile-location-card .btn{min-height:42px}
+  .profile-editor-inner>.btn{min-height:46px}
+}
+@media(min-width:601px){
+  .profile-editor-inner{width:min(540px,100%)}
+  .profile-extended-grid,.profile-row{display:flex;flex-direction:column}
+}
