@@ -94,3 +94,21 @@
 .coach-toggle input{margin-top:2px;accent-color:var(--r)}
 .coach-suggestions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
 .coach-suggestions .chip{text-align:left;white-space:normal}
+
+.showcase-upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.showcase-upload{position:relative;min-height:112px;border:1px dashed #e7c9ce;border-radius:17px;background:#fff8f9;padding:12px;text-align:left;color:var(--ink);display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.showcase-upload span{font-size:22px}.showcase-upload b{font-size:12px}.showcase-upload small{font-size:10px;color:var(--muted);line-height:1.3}
+.showcase-upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.showcase-preview-list{display:grid;gap:7px;margin:8px 0}
+.showcase-preview{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.showcase-preview b{font-size:11px}.showcase-preview span{font-size:10px;color:var(--muted);flex:1}
+.showcase-card{margin:9px 0;border:1px solid var(--line);border-radius:18px;background:#fff8f9;overflow:hidden}
+.showcase-card img,.showcase-card video{width:100%;max-height:360px;object-fit:cover;display:block}
+.showcase-card audio{width:calc(100% - 20px);margin:10px}
+.showcase-label{font-size:9px;font-weight:900;letter-spacing:.08em;color:var(--r);padding:10px 11px 3px}
+.showcase-card>span{display:block;font-size:11px;color:var(--muted);padding:5px 11px 10px}
+.showcase-stickers{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.personality-sticker{display:inline-flex;align-items:center;padding:7px 10px;border-radius:99px;background:linear-gradient(135deg,#fff0f3,#fff8f9);border:1px solid #f1cdd2;color:#8e4c58;font-size:10px;font-weight:800}
+.showcase-sticker-picker{margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:17px;background:#fff}
+.showcase-sticker-picker>b,.showcase-sticker-picker>span{display:block}.showcase-sticker-picker>b{font-size:12px}.showcase-sticker-picker>span{margin-top:3px}
+@media(max-width:430px){.showcase-upload-grid{grid-template-columns:1fr}.showcase-upload{min-height:82px}}
