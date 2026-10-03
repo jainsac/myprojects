@@ -74,6 +74,12 @@ export default function Home() {
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
+  const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
+  const [profileDraft, setProfileDraft] = useState({displayName:"",city:"",bio:"",gender:"",desiredGender:"ANY"});
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
   const [matchFilters, setMatchFilters] = useState({company:"",profession:"",religion:"",community:""});
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
@@ -132,6 +138,25 @@ export default function Home() {
   const passwordStrength = authForm.password.length===0 ? "" : Object.values(passwordChecks).filter(Boolean).length <= 2 ? "Weak" : Object.values(passwordChecks).filter(Boolean).length < 5 ? "Medium" : "Strong";
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function saveDiscoveryPreference(value:string){ setDesiredGender(value); setGenderSaving(true); try { const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({desiredGender:value})}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not save preference"); setUser((current:any)=>current?{...current,profile:d.profile}:current); const a=await fetch("/api/discover",{cache:"no-store"}); const ad=await a.json(); if(Array.isArray(ad.profiles)) { setDiscoverProfiles(ad.profiles); setIndex(0); setPhotoIndexes({}); } notify(value==="ANY"?"Showing all genders":"Showing "+value.toLowerCase().replace("_"," ")+" profiles"); } catch(err){ notify(err instanceof Error?err.message:"Could not save preference"); } finally { setGenderSaving(false); } }
+  function openProfileEditor(){
+    const p=user?.profile||{};
+    const lp=p.lifestylePreferences||{};
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY")});
+    setProfileModal("edit");
+  }
+  async function saveProfile(){
+    if(profileSaving)return;
+    setProfileSaving(true);
+    try{
+      const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(profileDraft)});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||"Could not save profile");
+      setUser((current:any)=>current?{...current,profile:d.profile}:current);
+      setProfileModal(null);
+      notify("Profile updated");
+    }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
+    finally{setProfileSaving(false);}
+  }
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setChatMatch(null);notify("Signed out");}
   async function loadEncryptedChat(matchId:string){
     const r=await fetch("/api/messages?matchId="+encodeURIComponent(matchId),{cache:"no-store"});
@@ -265,7 +290,9 @@ export default function Home() {
   }
 
   function spark() {
-    setLiked((current) => current.some((p) => p.name === person.name) ? current : [...current, person]);
+    if(person?.isTestProfile){ setIndex(current=>current+1); notify("Test profile skipped — demo data only"); return; }
+    const name=person?.displayName||person?.name||"profile";
+    setLiked((current) => current.some((p:any) => (p.displayName||p.name) === name) ? current : [...current, person]);
     setIndex((current) => current + 1);
     notify("Spark sent 💗");
   }
@@ -288,7 +315,7 @@ export default function Home() {
 {authMode==="register" && <div className="password-requirements"><div className="password-head"><b>Password requirements</b>{passwordStrength && <span className={"password-strength "+passwordStrength.toLowerCase()}>{passwordStrength}</span>}</div><div className="password-meter"><span style={{width: passwordStrength==="Strong"?"100%":passwordStrength==="Medium"?"66%":passwordStrength==="Weak"?"33%":"0%"}} /></div><div className="password-rules"><div className={passwordChecks.length?"valid":""}>{passwordChecks.length?"✓":"○"} At least 8 characters</div><div className={passwordChecks.upper?"valid":""}>{passwordChecks.upper?"✓":"○"} One uppercase letter (A–Z)</div><div className={passwordChecks.lower?"valid":""}>{passwordChecks.lower?"✓":"○"} One lowercase letter (a–z)</div><div className={passwordChecks.number?"valid":""}>{passwordChecks.number?"✓":"○"} One number (0–9)</div><div className={passwordChecks.special?"valid":""}>{passwordChecks.special?"✓":"○"} One special character (!@#$%^&*)</div></div></div>}
 {authError && <div className="auth-error">{authError}</div>}
 {authMode==="register" && <div className="safe">Identity status starts as <b>Pending</b>. Account access should remain limited until the verification provider confirms the required live selfie and government-ID checks.</div>}
-<button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account & verify"}</button></form><button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
+<button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account & verify"}</button></form>{authMode==="login" && <button type="button" className="forgot-link" onClick={()=>{setForgotEmail(authForm.email);setForgotOpen(true);}}>Forgot password?</button>}<button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
 
   return (
     <div className="cuddl-app">
@@ -394,8 +421,8 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={() => notify("Profile editor opened")}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
-          <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => notify("Privacy controls opened")}>Manage privacy</button></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button></div>
           <div className="grid">
             {[
               ["🧭","Relationship Compass","Compare goals, communication and lifestyle preferences."],
@@ -404,7 +431,7 @@ export default function Home() {
               ["🛂","Connection Passport","Private timeline of shared Cuddl moments."],
               ["🌡️","Connection Health","Interaction signals, not relationship certainty."],
               ["✨","Serendipity Mode","One surprise discovery outside your usual filters."],
-            ].map(([icon,title,copy]) => <div className="card" key={title}><b>{icon} {title}</b><span>{copy}</span></div>)}
+            ].map(([icon,title,copy]) => <button className="card" key={title} onClick={() => {setActiveFeature({title,copy});setProfileModal("feature");}}><b>{icon} {title}</b><span>{copy}</span></button>)}
           </div>
         </>}
       </main>
@@ -413,8 +440,12 @@ export default function Home() {
         <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
         <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
         <div className="panel" style={{padding:12}}>
+          <div className="camera-stage">
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
-          {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
+          {cameraStream && <div className="camera-guide-overlay"><div className={"face-shadow "+cameraAngle}><span></span></div><b>{cameraAngle==="front"?"Look straight at the guide":cameraAngle==="left"?"Turn slightly left":"Turn slightly right"}</b><small>Keep your face inside the box and match the black shadow.</small></div>}
+          {!cameraStream&&<div className="camera-guide-preview"><div className={"face-shadow "+cameraAngle}><span></span></div><b>Next: {cameraAngle} selfie</b><small>Match the black shadow when the camera opens.</small></div>}
+        </div>
+          
           <canvas ref={cameraCanvasRef} style={{display:"none"}} />
           <div className="actions">{!cameraStream?<button className="btn" disabled={freeVerificationStatus==="pending"||cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{freeVerificationStatus==="pending"?"Verification submitted ✓":allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Stop camera</button>}</div>
         </div>
@@ -432,6 +463,36 @@ export default function Home() {
         <p className="safe">“Unlimited” profile media is a product policy, but storage and abuse controls still apply. We should not promise unlimited storage without defining fair-use, file-size and retention limits.</p>
         <button className="btn" onClick={()=>notify("Profile media storage is planned separately from verification storage")}>Add media</button>
         <button className="btn ghost" onClick={()=>setMediaOpen(false)}>Close</button>
+      </div></div>}
+      {profileModal==="edit" && <div className="overlay popup-overlay"><div className="login-popup profile-modal">
+        <div className="eyebrow">Edit profile</div><h2>Make your profile yours.</h2>
+        <div className="auth-form">
+          <input className="field" placeholder="Profile name" value={profileDraft.displayName} onChange={e=>setProfileDraft({...profileDraft,displayName:e.target.value})}/>
+          <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})}/>
+          <textarea className="field profile-textarea" placeholder="Short bio" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})}/>
+          <div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
+        </div>
+        <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
+        <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
+      </div></div>}
+      {profileModal==="privacy" && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Privacy controls</div><h2>Control what you share.</h2>
+        <div className="privacy-list"><div><b>Incognito</b><span>Reduce visibility until you choose to interact.</span></div><div><b>Private albums</b><span>Keep selected media behind your approval.</span></div><div><b>Activity visibility</b><span>Control whether activity participation is visible on your profile.</span></div><div><b>Block contacts</b><span>Keep selected contacts out of discovery.</span></div></div>
+        <p className="safe">These controls are shown here as the privacy center foundation; persistence for each toggle will be wired into the privacy settings store next.</p>
+        <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
+      </div></div>}
+      {profileModal==="feature" && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Cuddl feature</div><h2>{activeFeature.title}</h2><p className="sub">{activeFeature.copy}</p>
+        <div className="panel"><b>Coming into focus</b><p className="sub">This opens as a dedicated Cuddl experience. Your profile controls remain available while we build the full interaction flow.</p></div>
+        <button className="btn" onClick={()=>notify(activeFeature.title+" opened")}>Explore</button>
+        <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
+      </div></div>}
+      {forgotOpen && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Account access</div><h2>Forgot password?</h2>
+        <p className="sub">Enter your registered email. Password reset email delivery is not connected in this test build, so no reset request is sent from this screen.</p>
+        <input className="field" type="email" autoComplete="email" placeholder="you@example.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)}/>
+        <button className="btn" onClick={()=>{setForgotOpen(false);notify(forgotEmail.trim()?"Reset email flow is pending email setup":"Enter your registered email")}}>Continue</button>
+        <button className="btn ghost" onClick={()=>setForgotOpen(false)}>Close</button>
       </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
         <div className="sheet-head"><div><div className="eyebrow">Special occasion · Live now</div><h2>{festival.festival.coverEmoji} {festival.festival.name}</h2><p className="sub">{festival.festival.description || "Move freely from one activity to another. This festival hub disappears when the admin switches it off."}</p></div><button className="icon-btn" onClick={()=>setFestivalOpen(false)}>×</button></div>
