@@ -1,0 +1,13 @@
+const sections=[
+["1. Eligibility","Cuddl is intended for adults aged 18 years or older. You must provide accurate account information and must not create an account for another person."],
+["2. Accounts and identity","One person should maintain one personal account. Identity and safety checks may be required for access to selected features. Verification status does not guarantee a person's character, intentions, background, or future conduct."],
+["3. Acceptable use","Do not harass, threaten, stalk, impersonate, scam, extort, sexually exploit, discriminate against, or intentionally deceive other members. Do not use Cuddl for unlawful commercial solicitation or automated abuse."],
+["4. User content","You retain rights in content you submit, while granting Cuddl the limited permissions needed to host, display, moderate and operate that content. You are responsible for having the rights and permissions necessary to upload it."],
+["5. Matches and interactions","A Spark is an expression of interest. A match or conversation is not a promise of compatibility, safety, consent, availability, or a relationship."],
+["6. Safety","Meet in public places, tell a trusted person about plans, protect financial and personal information, and report suspicious or unsafe conduct. Cuddl may restrict accounts or content under its safety processes."],
+["7. Premium services","Paid plans unlock the features described on the Plans page for the applicable billing period. Features may be changed for legal, safety, technical or product reasons, subject to applicable consumer rights."],
+["8. Disputes","Safety reports and customer/service complaints should first be submitted through Cuddl's support and grievance process. Nothing here removes rights that cannot lawfully be waived."],
+["9. Changes","We may update these terms when the service changes. Material changes should be presented through an appropriate notice before they take effect where required."],
+["10. Contact","Cuddl should publish a current support contact and grievance officer details before public launch. This test build does not substitute placeholder details for the final legal entity information."]
+];
+export default function Terms(){return <main className="policy-page"><a href="/" className="policy-back">← Back to Cuddl</a><div className="eyebrow">Legal</div><h1>Terms & Conditions</h1><p className="sub">Draft product terms for the Cuddl test build. Final terms should be reviewed and approved by an India-qualified lawyer before commercial launch.</p>{sections.map(([h,p])=><section className="policy-section" key={h}><h2>{h}</h2><p>{p}</p></section>)}</main>}
