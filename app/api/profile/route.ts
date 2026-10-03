@@ -42,6 +42,11 @@ export async function PUT(request:Request){
       profession:body.profession===undefined?existing.profession:String(body.profession||"").trim()||undefined,
       religion:body.religion===undefined?existing.religion:String(body.religion||"").trim()||undefined,
       community:body.community===undefined?existing.community:String(body.community||"").trim()||undefined,
+      locationLatitude:body.locationLatitude===undefined?existing.locationLatitude:Number(body.locationLatitude)||undefined,
+      locationLongitude:body.locationLongitude===undefined?existing.locationLongitude:Number(body.locationLongitude)||undefined,
+      locationAccuracy:body.locationAccuracy===undefined?existing.locationAccuracy:Number(body.locationAccuracy)||undefined,
+      locationGranted:body.locationGranted===undefined?existing.locationGranted:!!body.locationGranted,
+      locationUpdatedAt:body.locationGranted===true?new Date().toISOString():existing.locationUpdatedAt,
     };
     const db=getDb();
     const [profile]=await db.update(profiles).set({
