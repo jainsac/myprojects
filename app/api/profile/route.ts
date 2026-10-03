@@ -25,6 +25,8 @@ export async function PUT(request:Request){
       desiredGender:desiredGender||undefined,
       state:body.state===undefined?existing.state:String(body.state||"").trim()||undefined,
       maritalStatus:body.maritalStatus===undefined?existing.maritalStatus:String(body.maritalStatus||"").trim().toUpperCase()||undefined,
+      personalityPrompts:body.personalityPrompts===undefined?existing.personalityPrompts:Array.isArray(body.personalityPrompts)?body.personalityPrompts.filter((x:any)=>x?.question&&x?.answer).slice(0,3):existing.personalityPrompts,
+      partnerPrompts:body.partnerPrompts===undefined?existing.partnerPrompts:Array.isArray(body.partnerPrompts)?body.partnerPrompts.filter((x:any)=>x?.question&&x?.answer).slice(0,3):existing.partnerPrompts,
       foodPreference:body.foodPreference===undefined?existing.foodPreference:String(body.foodPreference||"").trim()||undefined,
       food:body.food===undefined?existing.food:String(body.food||"").trim()||undefined,
       diet:body.diet===undefined?existing.diet:String(body.diet||"").trim()||undefined,
