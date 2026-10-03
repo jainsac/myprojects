@@ -203,6 +203,8 @@ export default function Home() {
     notify(`${cameraAngle} selfie captured`);
   }
 
+  const allFreeVerificationCaptured = !!freeVerificationFiles.front && !!freeVerificationFiles.left && !!freeVerificationFiles.right;
+
   async function submitFreeVerification(){
     const keys=["front","left","right"] as const;
     if(keys.some(k=>!freeVerificationFiles[k])){notify("Please capture all 3 selfie angles");return;}
@@ -377,11 +379,11 @@ export default function Home() {
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
           {!cameraStream&&<div className="safe" style={{padding:24,textAlign:"center"}}>Camera is off.<br/><b>Next: {cameraAngle} selfie</b></div>}
           <canvas ref={cameraCanvasRef} style={{display:"none"}} />
-          <div className="actions">{!cameraStream?<button className="btn" disabled={cameraBusy} onClick={()=>startFreeCamera(cameraAngle)}>{cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera}>Stop camera</button>}</div>
+          <div className="actions">{!cameraStream?<button className="btn" disabled={cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{allFreeVerificationCaptured?"All selfies captured":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={allFreeVerificationCaptured}>Stop camera</button>}</div>
         </div>
         <div className="verification-list">{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
         <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
-        <button className="btn" disabled={freeVerificationStatus==="pending"||!freeVerificationFiles.front||!freeVerificationFiles.left||!freeVerificationFiles.right} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"Already submitted":"Submit free verification"}</button>
+        <button className="btn" disabled={freeVerificationStatus==="pending"||!allFreeVerificationCaptured} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"VERIFICATION SUBMITTED":"SUBMIT VERIFICATION"}</button>
         <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
         <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
       </div></div>}
