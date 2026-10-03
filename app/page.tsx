@@ -91,6 +91,10 @@ export default function Home() {
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<string>("unsupported");
+  const [boostOpen, setBoostOpen] = useState(false);
+  const [boostDuration, setBoostDuration] = useState("30");
+  const [loungeFilter, setLoungeFilter] = useState("All");
+  const [roomOpen, setRoomOpen] = useState<any>(null);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
@@ -473,7 +477,7 @@ export default function Home() {
           <div className="eyebrow">Cuddl Social Lounge</div>
           <h1 className="hero-title">Meet through what you love.</h1>
           <p className="sub">Activity is the starting point. Chemistry is what you discover along the way.</p>
-          <div className="chips">{["All","Activities","Games","Music","Social"].map(x => <button className="chip active" key={x}>{x}</button>)}</div>
+          <div className="chips">{["All","Activities","Games","Music","Social"].map(x => <button className={"chip "+(loungeFilter===x?"active":"")} key={x} onClick={()=>setLoungeFilter(x)}>{x}</button>)}</div>
 
           <section className="panel">
             <b>✨ Find someone who...</b><p className="sub">Pick an activity you want to share.</p>
@@ -488,8 +492,8 @@ export default function Home() {
           <div className="eyebrow" style={{marginTop:18}}>Games</div>
           {games.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={() => notify("Joined " + name)}>Play</button></div></div>)}
 
-          <div className="eyebrow" style={{marginTop:18}}>Music</div>
-          {music.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={() => notify("Joined " + name)}>Join</button></div><div className="room-meta">🎥 Camera optional · 🎙️ Mic optional · 🎉 Cheer = appreciation · Spark = romantic interest</div></div>)}
+          {(loungeFilter==="All"||loungeFilter==="Music") && <><div className="eyebrow" style={{marginTop:18}}>Music</div>
+          {music.map(([icon,name,meta]) => <div className="room" key={name} onClick={()=>setRoomOpen({type:"Music",icon,name,meta})}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={(e)=>{e.stopPropagation();setRoomOpen({type:"Music",icon,name,meta})}}>Join</button></div><div className="room-meta">🎥 Camera optional · 🎙️ Mic optional · 🎉 Cheer = appreciation · Spark = romantic interest</div></div>)}</>}
         </>}
 
         {tab === "matches" && <>
@@ -515,7 +519,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={()=>setBoostOpen(true)}>🚀 Boost profile</button><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions"><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
           <div className="grid">
             {[
@@ -530,6 +534,21 @@ export default function Home() {
         </>}
       </main>
 
+      {boostOpen && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="eyebrow">Premium visibility</div><h2>🚀 Boost your profile</h2>
+        <p className="sub">Boost moves your profile into more eligible discovery impressions for a limited period. It does not guarantee a Spark, match or reply.</p>
+        <div className="verification-list"><div><b>30 minutes</b> · standard Boost</div><div><b>60 minutes</b> · extended Boost</div><div><b>180 minutes</b> · extended visibility</div></div>
+        <select className="field" value={boostDuration} onChange={e=>setBoostDuration(e.target.value)}><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="180">180 minutes</option></select>
+        <button className="btn" onClick={()=>{setBoostOpen(false);notify("Boost activated for "+boostDuration+" minutes 🚀")}}>Activate Boost</button>
+        <button className="btn ghost" onClick={()=>setBoostOpen(false)}>Close</button>
+      </div></div>}
+      {roomOpen && <div className="overlay popup-overlay"><div className="login-popup">
+        <div className="popup-icon">{roomOpen.icon}</div><div className="eyebrow">{roomOpen.type}</div><h2>{roomOpen.name}</h2>
+        <p className="sub">{roomOpen.meta || "Live room"} · Meet people through shared participation rather than profile swiping.</p>
+        <div className="verification-list"><div>🎥 Camera optional</div><div>🎙️ Microphone optional</div><div>💗 Spark remains the romantic-interest action</div><div>🛡️ Report / block controls remain available</div></div>
+        <button className="btn" onClick={()=>{setRoomOpen(null);notify("You entered "+roomOpen.name+" ✦")}}>Enter now</button>
+        <button className="btn ghost" onClick={()=>setRoomOpen(null)}>Close</button>
+      </div></div>}
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
         <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
