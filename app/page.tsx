@@ -611,8 +611,14 @@ export default function Home() {
             </div>
             <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div></div><span className="score">{person.score||88}%</span></div>
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
-            {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card" key={"personality-"+i}><small>ABOUT ME</small><b>{x.question}</b><span>{x.answer}</span></div>)}
-            {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card partner-prompt" key={"partner-"+i}><small>WHAT I VALUE IN A PARTNER</small><b>{x.question}</b><span>{x.answer}</span></div>)}
+            {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
+              const src=x.media?.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.media.pathname):"";
+              return <div className="prompt-card" key={"personality-"+i}><small>ABOUT ME</small><b>{x.question}</b><span>{x.answer}</span>{src&&<div className="prompt-card-media">{x.media.kind==="photo"?<img src={src} alt="Prompt photo"/>:x.media.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>}</div>
+            })}
+            {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
+              const src=x.media?.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.media.pathname):"";
+              return <div className="prompt-card partner-prompt" key={"partner-"+i}><small>WHAT I VALUE IN A PARTNER</small><b>{x.question}</b><span>{x.answer}</span>{src&&<div className="prompt-card-media">{x.media.kind==="photo"?<img src={src} alt="Prompt photo"/>:x.media.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>}</div>
+            })}
             {Array.isArray(person.lifestylePreferences?.profileShowcase)&&person.lifestylePreferences.profileShowcase.slice(0,3).map((x:any,i:number)=>{
               const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
               return <div className="showcase-card" key={"showcase-"+i}>
