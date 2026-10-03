@@ -182,7 +182,7 @@ export default function Home() {
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
     finally{setProfileSaving(false);}
   }
-  async async function requestLocation(){
+  async function requestLocation(){
     if(!navigator.geolocation){notify("Location is not supported by this browser");return;}
     setLocationBusy(true);
     navigator.geolocation.getCurrentPosition(async pos=>{
