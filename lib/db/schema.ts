@@ -312,6 +312,7 @@ export const notifications = pgTable("notifications", {
   body: text("body").notNull(),
   audience: notificationAudience("audience").default("all").notNull(),
   city: text("city"),
+  targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "cascade" }),
   showPopup: boolean("show_popup").default(true).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
