@@ -93,7 +93,7 @@ export default function Home() {
     if(!user) return;
     const prefs=user?.profile?.lifestylePreferences||{};
     setDesiredGender(String(prefs.desiredGender||"ANY").toUpperCase());
-    const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10;
+    const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.state && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10;
     setProfileOnboarding(!complete);
     setOnboardingChecked(true);
   }, [user]);
@@ -166,7 +166,7 @@ export default function Home() {
       if(!r.ok) throw new Error(d.error||"Could not save profile");
       setUser((current:any)=>current?{...current,profile:d.profile}:current);
       const lp=d.profile?.lifestylePreferences||{};
-      const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10;
+      const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.state && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10;
       setProfileOnboarding(!complete);
       setProfileModal(complete?null:"edit");
       if(complete){setTab("discover");notify("Profile complete — welcome to Discover");} else notify("Please complete the required profile details");
@@ -250,7 +250,7 @@ export default function Home() {
       return true;
     });
   }, [discoverProfiles,matchFilters,user]);
-  const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : (discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length]), [index, searchableProfiles, discoverProfiles]);
+  const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : null, [index, searchableProfiles]);
   const personPhotos = useMemo(() => {
     const p:any=person||{};
     const lp=p.lifestylePreferences||{};
@@ -418,7 +418,7 @@ export default function Home() {
             <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
           </section>
 
-          <section className="panel single-profile-panel">
+          {searchableProfiles.length > 0 && <section className="panel single-profile-panel">
             <div className="eyebrow">Profile</div>
             <div className="discover-photo">
               {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
@@ -442,7 +442,7 @@ export default function Home() {
             </div>
             <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
             <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
-          </section>
+          </section>}
 
           {!searchableProfiles.length && <div className="panel"><b>No profiles match these filters.</b><p className="sub">Try widening age, distance, city or lifestyle preferences.</p><button className="btn ghost" onClick={clearSearchFilters}>Clear filters</button></div>}
         </>}
@@ -569,7 +569,7 @@ export default function Home() {
       {profileOnboarding && onboardingChecked && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
         <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
         <p className="sub">Cuddl will take you to profile search only after these basic details are completed. This prevents browsing other members with an unfinished profile.</p>
-        <div className="verification-list"><div>✓ Profile name</div><div>✓ City</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div></div>
+        <div className="verification-list"><div>✓ Profile name</div><div>✓ City & state</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div></div>
         <button className="btn" onClick={openProfileEditor}>Update my profile</button>
       </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
