@@ -1,5 +1,6 @@
 "use client";
-const plans=[
+type Plan={name:string;tag:string;copy:string;benefits:string[];prices:[string,string][];highlight:boolean};
+const plans:Plan[]=[
 {name:"Basic",tag:"Free",copy:"Everything needed to use Cuddl socially.",benefits:["Profile creation & mandatory onboarding","Activity discovery","Basic search & filters","Daily Sparks","Matches & secure chat","Basic games & activities","Safety, report & block","Free identity-check flow where available"],prices:[["Monthly","₹0"]],highlight:false},
 {name:"Plus",tag:"From ₹99/month",copy:"More discovery control and more ways to interact.",benefits:["Everything in Basic","More daily Sparks","Advanced search filters","Profile Revisit / Rewind","Basic Boost access","Who Sparked You — limited","Travel discovery","More activity/game access"],prices:[["Monthly","₹99"],["Quarterly","₹199"],["Half-year","₹399"],["Annual","₹599"]],highlight:false},
 {name:"Pro",tag:"From ₹149/month",copy:"For users who want stronger discovery and visibility tools.",benefits:["Everything in Plus","Priority Spark","More Boost credits","Full Who Sparked You","Advanced compatibility insights","Incognito discovery","Unlimited profile revisits","Priority activity access","Enhanced discovery controls"],prices:[["Monthly","₹149"],["Quarterly","₹349"],["Half-year","₹599"],["Annual","₹999"]],highlight:true},
