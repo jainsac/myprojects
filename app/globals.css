@@ -71,3 +71,5 @@
 .plan-prices span,.plan-prices b{display:block}.plan-prices span{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}.plan-prices b{font-size:14px;margin-top:2px}
 .plan-benefits{list-style:none;padding:0;margin:0 0 15px;display:grid;gap:6px}.plan-benefits li{font-size:11px;color:#51484b;line-height:1.35}
 .room{cursor:pointer}
+
+.active-now{display:inline-flex;align-items:center;gap:6px;font-weight:700}.active-dot{width:8px;height:8px;border-radius:50%;background:#20b26b;display:inline-block;box-shadow:0 0 0 3px rgba(32,178,107,.12)}
