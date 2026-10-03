@@ -1,0 +1,12 @@
+const sections=[
+["What we collect","Account details, profile information, verification metadata, content you choose to upload, and service/security information may be processed to operate Cuddl."],
+["Location","Location may be used for discovery distance, local activity recommendations and safety-related features. Cuddl should use the minimum location precision needed and should not expose a user's precise location to other members by default."],
+["Camera and microphone","Camera access is used for identity verification when you initiate that flow. Microphone access should be requested only for features such as voice introductions or calls when those features are actually used."],
+["Notifications","Notifications are used for account, safety, match and message updates. They should remain user-controlled and can be disabled at device level."],
+["Sharing","Personal data should be shared only as disclosed, for service providers needed to operate the product, for safety/legal requirements, or with user direction where applicable. Sensitive data should not be sold."],
+["Retention and deletion","Verification captures should have defined retention and deletion periods. Account deletion should trigger the documented deletion/retention workflow, subject to records that must legally be retained."],
+["Children","Cuddl is an adult service and should not be used by people under 18. Age and child-safety controls should be enforced consistently."],
+["Your controls","Users should be able to review, correct, export where applicable, withdraw permissions where applicable, report misuse, and request account/data deletion through the published privacy process."],
+["Legal review","This is a product-facing draft, not legal advice. The final privacy notice must be aligned with applicable Indian data-protection requirements and the actual data flows/vendors used by Cuddl."]
+];
+export default function Privacy(){return <main className="policy-page"><a href="/" className="policy-back">← Back to Cuddl</a><div className="eyebrow">Privacy</div><h1>Privacy Policy</h1><p className="sub">Plain-language overview of how Cuddl is intended to handle personal data.</p>{sections.map(([h,p])=><section className="policy-section" key={h}><h2>{h}</h2><p>{p}</p></section>)}</main>}
