@@ -76,9 +76,12 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
   const chatQuickItems=["👋 Hi there!","😂 That made me smile","😍 Love this","👀 Tell me more","🤭 You’re cute","🔥 Interesting!","❤️ Same here","🎯 Challenge accepted"];
   const [profileSaving, setProfileSaving] = useState(false);
+  const [aiCoachEnabled, setAiCoachEnabled] = useState(false);
+  const [aiCoachBusy, setAiCoachBusy] = useState(false);
+  const [aiCoachSuggestion, setAiCoachSuggestion] = useState<string[]>([]);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [matchFilters, setMatchFilters] = useState({
@@ -166,9 +169,21 @@ export default function Home() {
   function openProfileEditor(){
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts:[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
     setProfileModal("edit");
   }
+  async function requestAiChatCoach(){
+    if(aiCoachBusy || chatMessages.length<4 || !chatMatch?.matchId) return;
+    setAiCoachBusy(true); setAiCoachSuggestion([]);
+    try{
+      const recent=chatMessages.slice(-12).map(m=>({mine:m.senderId===user?.user?.id||m.senderId===user?.id,text:String(m.body||"").slice(0,500)})).filter(m=>m.text && !m.text.startsWith("["));
+      const r=await fetch("/api/ai/chat-coach",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:recent,enabled:aiCoachEnabled})});
+      const d=await r.json(); if(!r.ok) throw new Error(d.error||"AI coach unavailable");
+      setAiCoachSuggestion(Array.isArray(d.suggestions)?d.suggestions:[]);
+    }catch(err){notify(err instanceof Error?err.message:"AI coach unavailable");}
+    finally{setAiCoachBusy(false);}
+  }
+
   async function saveProfile(){
     if(profileSaving)return;
     setProfileSaving(true);
@@ -459,6 +474,8 @@ export default function Home() {
             </div>
             <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div></div><span className="score">{person.score||88}%</span></div>
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
+            {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card" key={"personality-"+i}><small>ABOUT ME</small><b>{x.question}</b><span>{x.answer}</span></div>)}
+            {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card partner-prompt" key={"partner-"+i}><small>WHAT I VALUE IN A PARTNER</small><b>{x.question}</b><span>{x.answer}</span></div>)}
             <div className="detail-grid">
               <div><small>Company</small><b>{person.lifestylePreferences?.company||"—"}</b></div>
               <div><small>Profession</small><b>{person.lifestylePreferences?.profession||"—"}</b></div>
@@ -522,6 +539,13 @@ export default function Home() {
           </div>
           <div className="chat-tools-note">Cuddl suggestions help break the ice; you stay in control of what you send.</div>
         </div>
+        <div className="ai-coach">
+          <div className="chat-tool-head"><b>✦ Cuddl AI Conversation Coach</b><span>Optional</span></div>
+          <label className="coach-toggle"><input type="checkbox" checked={aiCoachEnabled} onChange={e=>setAiCoachEnabled(e.target.checked)}/><span>Allow Cuddl to analyze the recent decrypted chat when I ask for suggestions.</span></label>
+          {aiCoachEnabled && <><button type="button" className="btn ghost" onClick={requestAiChatCoach} disabled={aiCoachBusy||chatMessages.length<4}>{aiCoachBusy?"Thinking…":"Suggest next steps"}</button>
+          {aiCoachSuggestion.length>0 && <div className="coach-suggestions">{aiCoachSuggestion.map((x:string,i:number)=><button type="button" className="chip" key={i} onClick={()=>setChatText(x)}>{x}</button>)}</div>}
+          <div className="chat-tools-note">AI suggestions are optional. Cuddl never sends them automatically.</div></>}
+        </div>
         <form className="chat-compose" onSubmit={sendMessage}><input className="field" value={chatText} onChange={e=>setChatText(e.target.value)} maxLength={2000} placeholder="Write a message…" /><button className="btn" disabled={chatBusy||!chatText.trim()}>{chatBusy?"…":"Send"}</button></form>
           </div>}
           <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => setRoomOpen({type:"AI Wingman",icon:"✦",name:"Create opener",meta:"Draft conversation starters from shared activities. Nothing is sent without your approval."})}>Create opener</button></div>
@@ -536,7 +560,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
-          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={()=>setBoostOpen(true)}>🚀 Boost profile</button><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
+          <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div>{Array.isArray(user?.profile?.lifestylePreferences?.personalityPrompts)&&user.profile.lifestylePreferences.personalityPrompts.some((x:any)=>x?.answer)&&<div className="panel"><b>✨ Your personality story</b><p className="sub">Your selected prompts are visible on your profile.</p></div>}<div className="actions"><button className="btn" onClick={()=>setBoostOpen(true)}>🚀 Boost profile</button><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
           <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions"><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
           <div className="grid">
             {[
@@ -601,6 +625,31 @@ export default function Home() {
           <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})} required />
           <textarea className="field profile-textarea" placeholder="Short bio (tell people something real about you)" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})} minLength={10} required />
           <div className="profile-extended-grid"><input className="field" placeholder="State" value={profileDraft.state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value})}/><input className="field" placeholder="Food preference" value={profileDraft.foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value})}/><input className="field" placeholder="Company" value={profileDraft.company||""} onChange={e=>setProfileDraft({...profileDraft,company:e.target.value})}/><input className="field" placeholder="Profession" value={profileDraft.profession||""} onChange={e=>setProfileDraft({...profileDraft,profession:e.target.value})}/><input className="field" placeholder="Religion" value={profileDraft.religion||""} onChange={e=>setProfileDraft({...profileDraft,religion:e.target.value})}/><input className="field" placeholder="Community" value={profileDraft.community||""} onChange={e=>setProfileDraft({...profileDraft,community:e.target.value})}/><select className="field" value={profileDraft.diet||""} onChange={e=>setProfileDraft({...profileDraft,diet:e.target.value})}><option value="">Diet</option><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Jain</option><option>Non-vegetarian</option><option>Anything</option></select><select className="field" value={profileDraft.smoking||""} onChange={e=>setProfileDraft({...profileDraft,smoking:e.target.value})}><option value="">Smoking</option><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Drinking</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select><input className="field" placeholder="Relationship goal" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}/><input className="field" placeholder="Education" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}/><input className="field" placeholder="Children preference" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}/><input className="field" placeholder="Pets preference" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}/><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select><input className="field" placeholder="Language(s)" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}/><input className="field" inputMode="numeric" placeholder="Height (cm)" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value.replace(/\D/g,"")})}/></div><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
+          <div className="filter-section-title">✨ Show your personality</div>
+          <p className="safe">Choose up to 3. These are visible on your profile and help people start a real conversation.</p>
+          {[0,1,2].map((i:number)=>{
+            const item=profileDraft.personalityPrompts?.[i]||{question:"",answer:""};
+            return <div className="prompt-editor" key={"pp-"+i}>
+              <select className="field" value={item.question} onChange={e=>{const a=[...(profileDraft.personalityPrompts||[])];a[i]={question:e.target.value,answer:item.answer};setProfileDraft({...profileDraft,personalityPrompts:a})}}>
+                <option value="">Personality prompt {i+1}</option>
+                <option>I'm happiest when…</option><option>In my friend group, I'm the one who…</option><option>I could talk all night about…</option><option>A perfect Sunday for me is…</option><option>Something people notice about me…</option><option>My most spontaneous decision was…</option><option>My underrated talent is…</option><option>You'll never guess that I…</option>
+              </select>
+              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.personalityPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,personalityPrompts:a})}} />
+            </div>
+          })}
+          <div className="filter-section-title">❤️ What I value in a partner</div>
+          <p className="safe">These help Cuddl understand compatibility. You control what you reveal.</p>
+          {[0,1,2].map((i:number)=>{
+            const item=profileDraft.partnerPrompts?.[i]||{question:"",answer:""};
+            return <div className="prompt-editor" key={"vp-"+i}>
+              <select className="field" value={item.question} onChange={e=>{const a=[...(profileDraft.partnerPrompts||[])];a[i]={question:e.target.value,answer:item.answer};setProfileDraft({...profileDraft,partnerPrompts:a})}}>
+                <option value="">Partner preference {i+1}</option>
+                <option>I'm looking for someone who…</option><option>A relationship works best for me when…</option><option>One thing that matters to me long-term…</option><option>My ideal way to spend a free day together…</option><option>Communication matters to me because…</option><option>When there's a disagreement, I prefer…</option><option>Family and relationships…</option><option>I'd love a partner who is curious about…</option>
+              </select>
+              <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.partnerPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,partnerPrompts:a})}} />
+            </div>
+          })}
+        </div>
         </div>
         <button className="btn" onClick={saveProfile} disabled={profileSaving}>{profileSaving?"Saving…":"Save changes"}</button>
         <button className="btn ghost" onClick={()=>setProfileModal(null)}>Close</button>
