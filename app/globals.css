@@ -112,3 +112,29 @@
 .showcase-sticker-picker{margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:17px;background:#fff}
 .showcase-sticker-picker>b,.showcase-sticker-picker>span{display:block}.showcase-sticker-picker>b{font-size:12px}.showcase-sticker-picker>span{margin-top:3px}
 @media(max-width:430px){.showcase-upload-grid{grid-template-columns:1fr}.showcase-upload{min-height:82px}}
+
+.profile-editor-page{position:fixed;inset:0;z-index:120;background:#fff;overflow:auto}
+.profile-editor-inner{width:min(760px,100%);min-height:100%;margin:auto;padding:22px 18px 105px;background:#fff}
+.profile-editor-header{position:sticky;top:0;z-index:5;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:4px 0 16px;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);border-bottom:1px solid #f5e8ea;margin-bottom:14px}
+.profile-editor-header h2{font-size:30px;line-height:1.08;letter-spacing:-.7px;margin:5px 0 4px}
+.profile-editor-header .sub{max-width:570px;margin:0}
+.profile-editor-inner>.auth-form{gap:11px}
+.profile-editor-inner>.btn{width:100%;margin-top:9px}
+.prompt-editor-rich{padding:13px;border:1px solid var(--line);border-radius:19px;background:#fffafa}
+.prompt-editor-rich .field{background:#fff}
+.prompt-media-tools{display:flex;gap:7px;flex-wrap:wrap}
+.prompt-media-btn{position:relative;min-height:36px;padding:0 11px;border:1px solid #edcfd3;border-radius:12px;background:#fff;color:#8d4c57;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+.prompt-media-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.prompt-media-btn.recording{background:#fff0f2;color:#b3263a;border-color:#ef9da8}
+.prompt-media-added{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:10px}
+.prompt-media-added span{flex:1;color:#5e5256}
+.prompt-card-media{margin-top:9px;border-radius:13px;overflow:hidden;background:#f8f1f2}
+.prompt-card-media img,.prompt-card-media video{display:block;width:100%;max-height:300px;object-fit:cover}
+.prompt-card-media audio{display:block;width:100%;margin:7px 0}
+@media(max-width:600px){
+ .profile-editor-inner{padding:16px 14px 105px}
+ .profile-editor-header h2{font-size:25px}
+ .profile-editor-header .icon-btn{flex:none}
+ .prompt-media-tools{display:grid;grid-template-columns:1fr 1fr 1fr}
+ .prompt-media-btn{width:100%;padding:0 5px}
+}
