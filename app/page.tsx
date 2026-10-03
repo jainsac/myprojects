@@ -422,7 +422,8 @@ export default function Home() {
     const cityCoords:any={Delhi:[28.6139,77.2090],Gurugram:[28.4595,77.0266],Noida:[28.5355,77.3910],Mumbai:[19.0760,72.8777],Bengaluru:[12.9716,77.5946],Bangalore:[12.9716,77.5946],Pune:[18.5204,73.8567],Jaipur:[26.9124,75.7873],Hyderabad:[17.3850,78.4867],Chandigarh:[30.7333,76.7794]};
     const km=(a:any,b:any)=>{if(!a||!b)return null;const R=6371,rad=(x:number)=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));};
     const currentCity=String(user?.profile?.city||"Delhi");
-    const origin=cityCoords[currentCity]||null;
+    const ownLp=user?.profile?.lifestylePreferences||{};
+    const origin=(Number.isFinite(Number(ownLp.locationLatitude))&&Number.isFinite(Number(ownLp.locationLongitude)))?[Number(ownLp.locationLatitude),Number(ownLp.locationLongitude)]:cityCoords[currentCity]||null;
     const text=(v:any)=>String(v??"").toLowerCase().trim();
     const has=(v:any,q:string)=>!q||text(v).includes(text(q));
     return discoverProfiles.filter((p:any)=>{
@@ -441,7 +442,7 @@ export default function Home() {
       if(matchFilters.verified==="yes" && lp.verified!==true && p.verified!==true) return false;
       if(matchFilters.photos==="yes" && !((Array.isArray(lp.photos)&&lp.photos.length)||p.avatarUrl)) return false;
       if(matchFilters.distance){
-        const target=cityCoords[String(p.city||"")];
+        const target=(Number.isFinite(Number(lp.locationLatitude))&&Number.isFinite(Number(lp.locationLongitude)))?[Number(lp.locationLatitude),Number(lp.locationLongitude)]:cityCoords[String(p.city||"")];
         const distance=origin&&target?km(origin,target):typeof lp.distanceKm==="number"?lp.distanceKm:null;
         if(distance===null || distance>Number(matchFilters.distance)) return false;
       }
