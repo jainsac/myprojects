@@ -19,7 +19,9 @@ export async function PUT(request:Request){
     const desiredGender=body.desiredGender===undefined?String(existing.desiredGender||""):String(body.desiredGender||"").trim().toUpperCase();
     if(gender && !genders.includes(gender))return NextResponse.json({error:"Invalid gender selection."},{status:400});
     if(desiredGender && !desiredGenders.includes(desiredGender))return NextResponse.json({error:"Invalid discovery preference."},{status:400});
+    const allowedKeys=["state","foodPreference","food","diet","smoking","drinking","relationshipGoal","relationshipGoals","education","children","pets","exercise","language","languages","heightCm","height","verified","photos","company","profession","religion","community"];
     const lifestylePreferences={...existing,gender:gender||undefined,desiredGender:desiredGender||undefined};
+    for(const key of allowedKeys){if(body[key]!==undefined) lifestylePreferences[key]=body[key];}
     const db=getDb();
     const [profile]=await db.update(profiles).set({
       displayName,
