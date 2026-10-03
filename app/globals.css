@@ -49,3 +49,4 @@
   .search-panel .filter-grid{grid-template-columns:1fr}
   .detail-grid{grid-template-columns:1fr 1fr}
 }
+.profile-extended-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}.profile-extended-grid .field{min-width:0}@media(max-width:500px){.profile-extended-grid{grid-template-columns:1fr}}
