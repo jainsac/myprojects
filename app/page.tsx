@@ -76,7 +76,8 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
+  const chatQuickItems=["👋 Hi there!","😂 That made me smile","😍 Love this","👀 Tell me more","🤭 You’re cute","🔥 Interesting!","❤️ Same here","🎯 Challenge accepted"];
   const [profileSaving, setProfileSaving] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -101,7 +102,7 @@ export default function Home() {
     if(!user) return;
     const prefs=user?.profile?.lifestylePreferences||{};
     setDesiredGender(String(prefs.desiredGender||"ANY").toUpperCase());
-    const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.state && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10;
+    const complete=!!user?.profile?.displayName && !!user?.profile?.city && !!prefs.state && !!prefs.gender && !!prefs.desiredGender && String(user?.profile?.bio||"").trim().length>=10 && !!prefs.maritalStatus;
     setProfileOnboarding(!complete);
     setOnboardingChecked(true);
   }, [user]);
@@ -165,7 +166,7 @@ export default function Home() {
   function openProfileEditor(){
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
     setProfileModal("edit");
   }
   async function saveProfile(){
@@ -177,10 +178,10 @@ export default function Home() {
       if(!r.ok) throw new Error(d.error||"Could not save profile");
       setUser((current:any)=>current?{...current,profile:d.profile}:current);
       const lp=d.profile?.lifestylePreferences||{};
-      const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.state && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10;
+      const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.state && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10 && !!lp.maritalStatus;
       setProfileOnboarding(!complete);
       setProfileModal(complete?null:"edit");
-      if(complete){setTab("discover");setPermissionsOpen(true);notify("Profile complete — finish your privacy & permission setup");} else notify("Please complete the required profile details");
+      if(complete){setTab("discover");setPermissionsOpen(true);notify("Profile complete — finish your privacy & permission setup");} else notify("Please complete the required profile details, including marital status");
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
     finally{setProfileSaving(false);}
   }
@@ -229,9 +230,8 @@ export default function Home() {
     try { await loadEncryptedChat(matchId); }
     catch(err) { notify(err instanceof Error?err.message:"Could not load secure chat"); }
   }
-  async function sendMessage(e?:React.FormEvent){
-    e?.preventDefault();
-    const text=chatText.trim();
+  async function sendChatContent(content:string){
+    const text=content.trim();
     if(!text || !chatMatch?.matchId || !chatMatch?.otherUserId || chatBusy) return;
     setChatBusy(true);
     try {
@@ -248,6 +248,11 @@ export default function Home() {
     } catch(err) { notify(err instanceof Error?err.message:"Could not send encrypted message"); }
     finally { setChatBusy(false); }
   }
+  async function sendMessage(e?:React.FormEvent){
+    e?.preventDefault();
+    await sendChatContent(chatText);
+  }
+
   const searchableProfiles = useMemo(() => {
     const cityCoords:any={Delhi:[28.6139,77.2090],Gurugram:[28.4595,77.0266],Noida:[28.5355,77.3910],Mumbai:[19.0760,72.8777],Bengaluru:[12.9716,77.5946],Bangalore:[12.9716,77.5946],Pune:[18.5204,73.8567],Jaipur:[26.9124,75.7873],Hyderabad:[17.3850,78.4867],Chandigarh:[30.7333,76.7794]};
     const km=(a:any,b:any)=>{if(!a||!b)return null;const R=6371,rad=(x:number)=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));};
@@ -507,7 +512,17 @@ export default function Home() {
               {chatMessages.length===0 && <div className="chat-empty">Start the conversation. Ask about a shared activity, song, game or place.</div>}
               {chatMessages.map(m=><div key={m.id} className={m.senderId===user?.user?.id||m.senderId===user?.id?"bubble mine":"bubble"}>{m.body}</div>)}
             </div>
-            <form className="chat-compose" onSubmit={sendMessage}><input className="field" value={chatText} onChange={e=>setChatText(e.target.value)} maxLength={2000} placeholder="Write a message…" /><button className="btn" disabled={chatBusy||!chatText.trim()}>{chatBusy?"…":"Send"}</button></form>
+            <div className="chat-tools">
+          <div className="chat-tool-head"><b>Quick expressions</b><span>Tap to send</span></div>
+          <div className="chips chat-quick">{chatQuickItems.map(x=><button type="button" className="chip" key={x} onClick={()=>sendChatContent(x)}>{x}</button>)}</div>
+          <div className="chat-card-row">
+            <button type="button" className="chat-card" onClick={()=>sendChatContent("🎲 Let’s play Would You Rather!")}>🎲 <b>Play</b><small>Would You Rather</small></button>
+            <button type="button" className="chat-card" onClick={()=>sendChatContent("💬 Ask me anything — your turn!")}>💬 <b>Prompt</b><small>Ask me anything</small></button>
+            <button type="button" className="chat-card" onClick={()=>sendChatContent("☕ Pick a date: coffee, walk or dinner?")}>☕ <b>Date idea</b><small>Pick one</small></button>
+          </div>
+          <div className="chat-tools-note">Cuddl suggestions help break the ice; you stay in control of what you send.</div>
+        </div>
+        <form className="chat-compose" onSubmit={sendMessage}><input className="field" value={chatText} onChange={e=>setChatText(e.target.value)} maxLength={2000} placeholder="Write a message…" /><button className="btn" disabled={chatBusy||!chatText.trim()}>{chatBusy?"…":"Send"}</button></form>
           </div>}
           <div className="panel"><b>✦ AI Wingman</b><p className="sub">Suggestions only. Cuddl never sends a message without your approval.</p><button className="btn" onClick={() => setRoomOpen({type:"AI Wingman",icon:"✦",name:"Create opener",meta:"Draft conversation starters from shared activities. Nothing is sent without your approval."})}>Create opener</button></div>
         </>}
