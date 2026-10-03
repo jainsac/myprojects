@@ -73,3 +73,13 @@
 .room{cursor:pointer}
 
 .active-now{display:inline-flex;align-items:center;gap:6px;font-weight:700}.active-dot{width:8px;height:8px;border-radius:50%;background:#20b26b;display:inline-block;box-shadow:0 0 0 3px rgba(32,178,107,.12)}
+.chat-tools{margin:8px 0 10px;padding:10px;border:1px solid var(--line);border-radius:17px;background:#fffafa}
+.chat-tool-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:5px}
+.chat-tool-head span{color:var(--muted);font-size:10px}
+.chat-quick{padding:2px 0 7px;flex-wrap:nowrap}
+.chat-quick .chip{font-size:11px;padding:7px 10px}
+.chat-card-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.chat-card{min-height:64px;border:1px solid var(--line);border-radius:14px;background:#fff;text-align:left;padding:8px;color:var(--ink)}
+.chat-card b,.chat-card small{display:block}.chat-card b{font-size:11px;margin-top:3px}.chat-card small{font-size:9px;color:var(--muted);margin-top:2px}
+.chat-tools-note{font-size:9px;color:var(--muted);margin-top:7px}
+@media(max-width:430px){.chat-card-row{grid-template-columns:1fr 1fr 1fr}.chat-card{padding:7px 6px}}
