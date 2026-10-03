@@ -319,16 +319,30 @@ export default function Home() {
         access:"private",
         handleUploadUrl:"/api/profile/media/upload"
       });
-      const item={kind,pathname:blob.pathname,prompt:kind==="voice"?"🎙️ My voice":"🎥 My vibe"};
-      setProfileDraft((d:any)=>({...d,profileShowcase:[...(d.profileShowcase||[]).filter((x:any)=>x.kind!==kind),item]}));
+      const item={kind,pathname:blob.pathname,prompt:kind==="photo"?"📸 My photo":kind==="voice"?"🎙️ My voice":"🎥 My vibe"};
+      setProfileDraft((d:any)=>{
+        const current=Array.isArray(d.profileShowcase)?d.profileShowcase:[];
+        const next=kind==="photo"
+          ? [...current.filter((x:any)=>x.kind==="photo"),item].slice(-6).concat(current.filter((x:any)=>x.kind!=="photo"))
+          : [...current.filter((x:any)=>x.kind!==kind),item];
+        return {...d,profileShowcase:next.slice(0,8)};
+      });
       notify(kind==="photo"?"Photo added to your showcase":kind==="voice"?"Voice intro added":"Video intro added");
     }catch(err){notify(err instanceof Error?err.message:"Could not upload showcase media");}
     finally{setShowcaseBusy(false);}
   }
-  function handleShowcaseFile(e:React.ChangeEvent<HTMLInputElement>,kind:"photo"|"video"){
-    const file=e.target.files?.[0]; if(!file)return;
-    uploadProfileShowcase(file,kind);
-    e.currentTarget.value="";
+  async function handleShowcaseFile(e:React.ChangeEvent<HTMLInputElement>,kind:"photo"|"video"){
+    const files=Array.from(e.currentTarget.files||[]);
+    if(!files.length)return;
+    try{
+      if(kind==="photo"){
+        for(const file of files) await uploadProfileShowcase(file,"photo");
+      }else{
+        await uploadProfileShowcase(files[0],"video");
+      }
+    }finally{
+      e.currentTarget.value="";
+    }
   }
   async function startShowcaseRecording(kind:"voice"|"video"){
     if(showcaseRecording)return;
@@ -336,15 +350,16 @@ export default function Home() {
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==="video"});
       showcaseStreamRef.current=stream;
-      const preferred=kind==="video"?"video/webm;codecs=vp9,opus":"audio/webm;codecs=opus";
+      const preferred=kind==="video"?"video/webm;codecs=vp8,opus":"audio/webm;codecs=opus";
       const mime=MediaRecorder.isTypeSupported(preferred)?preferred:(kind==="video"?"video/webm":"audio/webm");
       const recorder=new MediaRecorder(stream,{mimeType:mime});
       showcaseChunksRef.current=[];
       recorder.ondataavailable=(e)=>{if(e.data.size)showcaseChunksRef.current.push(e.data);};
       recorder.onstop=async()=>{
         const blob=new Blob(showcaseChunksRef.current,{type:mime});
-        const ext=kind==="video"?"webm":"webm";
-        await uploadProfileShowcase(new File([blob],`cuddl-${kind}-${Date.now()}.${ext}`,{type:mime}),kind);
+        const ext="webm";
+        const uploadType=kind==="video"?"video/webm":"audio/webm";
+        await uploadProfileShowcase(new File([blob],`cuddl-${kind}-${Date.now()}.webm`,{type:uploadType}),kind);
         stream.getTracks().forEach(t=>t.stop());
         showcaseStreamRef.current=null;
       };
@@ -869,7 +884,7 @@ export default function Home() {
           <input className="field" placeholder="Profile name" value={profileDraft.displayName} onChange={e=>setProfileDraft({...profileDraft,displayName:e.target.value})}/>
           <input className="field" placeholder="City" value={profileDraft.city} onChange={e=>setProfileDraft({...profileDraft,city:e.target.value})} required />
           <textarea className="field profile-textarea" placeholder="Short bio (tell people something real about you)" value={profileDraft.bio} onChange={e=>setProfileDraft({...profileDraft,bio:e.target.value})} minLength={10} required />
-          <div className="profile-location-card"><div><div className="eyebrow">Discovery location</div><b>📍 Current location</b><p className="safe">Used for nearby-distance matching. Your exact coordinates are never shown to other members.</p></div><button type="button" className="btn ghost" onClick={useCurrentLocationForProfile} disabled={locationBusy}>{profileDraft.locationGranted?"Update current location":"Use current location"}</button>{profileDraft.locationGranted&&<span className="location-status">✓ Location captured — save profile to apply</span>}</div><div className="profile-extended-grid"><input className="field" placeholder="State" value={profileDraft.state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value})}/><input className="field" placeholder="Food preference" value={profileDraft.foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value})}/><input className="field" placeholder="Company" value={profileDraft.company||""} onChange={e=>setProfileDraft({...profileDraft,company:e.target.value})}/><input className="field" placeholder="Profession" value={profileDraft.profession||""} onChange={e=>setProfileDraft({...profileDraft,profession:e.target.value})}/><input className="field" placeholder="Religion" value={profileDraft.religion||""} onChange={e=>setProfileDraft({...profileDraft,religion:e.target.value})}/><input className="field" placeholder="Community" value={profileDraft.community||""} onChange={e=>setProfileDraft({...profileDraft,community:e.target.value})}/><select className="field" value={profileDraft.diet||""} onChange={e=>setProfileDraft({...profileDraft,diet:e.target.value})}><option value="">Diet</option><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Jain</option><option>Non-vegetarian</option><option>Anything</option></select><select className="field" value={profileDraft.smoking||""} onChange={e=>setProfileDraft({...profileDraft,smoking:e.target.value})}><option value="">Smoking</option><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Drinking</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select><input className="field" placeholder="Relationship goal" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}/><input className="field" placeholder="Education" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}/><input className="field" placeholder="Children preference" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}/><input className="field" placeholder="Pets preference" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}/><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select><input className="field" placeholder="Language(s)" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}/><input className="field" inputMode="numeric" placeholder="Height (cm)" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value.replace(/\D/g,"")})}/></div><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
+          <div className="profile-location-card"><div><div className="eyebrow">Discovery location</div><b>📍 Current location</b><p className="safe">Used for nearby-distance matching. Your exact coordinates are never shown to other members.</p></div><button type="button" className="btn ghost" onClick={useCurrentLocationForProfile} disabled={locationBusy}>{profileDraft.locationGranted?"Update current location":"Use current location"}</button>{profileDraft.locationGranted&&<span className="location-status">✓ Location captured — save profile to apply</span>}</div><div className="profile-extended-grid"><input className="field" placeholder="State" value={profileDraft.state||""} onChange={e=>setProfileDraft({...profileDraft,state:e.target.value})}/><select className="field" value={profileDraft.maritalStatus||""} onChange={e=>setProfileDraft({...profileDraft,maritalStatus:e.target.value})}><option value="">Marital status</option><option value="SINGLE">Single</option><option value="DIVORCED">Divorced</option><option value="WIDOWED">Widowed</option><option value="SEPARATED">Separated</option><option value="PREFER_NOT_TO_SAY">Prefer not to say</option></select><input className="field" placeholder="Food preference" value={profileDraft.foodPreference||""} onChange={e=>setProfileDraft({...profileDraft,foodPreference:e.target.value})}/><input className="field" placeholder="Company" value={profileDraft.company||""} onChange={e=>setProfileDraft({...profileDraft,company:e.target.value})}/><input className="field" placeholder="Profession" value={profileDraft.profession||""} onChange={e=>setProfileDraft({...profileDraft,profession:e.target.value})}/><input className="field" placeholder="Religion" value={profileDraft.religion||""} onChange={e=>setProfileDraft({...profileDraft,religion:e.target.value})}/><input className="field" placeholder="Community" value={profileDraft.community||""} onChange={e=>setProfileDraft({...profileDraft,community:e.target.value})}/><select className="field" value={profileDraft.diet||""} onChange={e=>setProfileDraft({...profileDraft,diet:e.target.value})}><option value="">Diet</option><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Jain</option><option>Non-vegetarian</option><option>Anything</option></select><select className="field" value={profileDraft.smoking||""} onChange={e=>setProfileDraft({...profileDraft,smoking:e.target.value})}><option value="">Smoking</option><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Drinking</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select><input className="field" placeholder="Relationship goal" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}/><input className="field" placeholder="Education" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}/><input className="field" placeholder="Children preference" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}/><input className="field" placeholder="Pets preference" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}/><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select><input className="field" placeholder="Language(s)" value={profileDraft.language||""} onChange={e=>setProfileDraft({...profileDraft,language:e.target.value})}/><input className="field" inputMode="numeric" placeholder="Height (cm)" value={profileDraft.heightCm||""} onChange={e=>setProfileDraft({...profileDraft,heightCm:e.target.value.replace(/\D/g,"")})}/></div><div className="profile-row"><select className="field" value={profileDraft.gender} onChange={e=>setProfileDraft({...profileDraft,gender:e.target.value})}><option value="">Gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option></select><select className="field" value={profileDraft.desiredGender} onChange={e=>setProfileDraft({...profileDraft,desiredGender:e.target.value})}><option value="FEMALE">Women</option><option value="MALE">Men</option><option value="NON_BINARY">Non-binary</option><option value="OTHER">Other</option><option value="ANY">Everyone</option></select></div>
           <div className="filter-section-title">✨ Show your personality</div>
           <p className="safe">Choose up to 3. Build each one as a complete Prompt Story: a short caption plus any combination of photo, video and voice explanation. Use one or use all — your choice.</p>
           {[0,1,2].map((i:number)=>{
@@ -902,7 +917,16 @@ export default function Home() {
             <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="video"?stopShowcaseRecording():startShowcaseRecording("video")} disabled={showcaseBusy}><span>🎥</span><b>{showcaseRecording==="video"?"Stop video":"Record video"}</b><small>Up to 15 seconds</small></button>
           </div>
           {Array.isArray(profileDraft.profileShowcase)&&profileDraft.profileShowcase.length>0&&<div className="showcase-preview-list">
-            {profileDraft.profileShowcase.map((x:any,i:number)=><div className="showcase-preview" key={x.pathname||i}><b>{x.kind==="photo"?"📸 Photo":x.kind==="voice"?"🎙️ Voice intro":"🎥 Video intro"}</b><span>{x.pathname?"Added to your profile":"Not uploaded"}</span><button type="button" className="chip" onClick={()=>setProfileDraft((d:any)=>({...d,profileShowcase:(d.profileShowcase||[]).filter((_:any,j:number)=>j!==i)}))}>Remove</button></div>)}
+            {profileDraft.profileShowcase.map((x:any,i:number)=>{
+              const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
+              return <div className="showcase-preview" key={x.pathname||i}>
+                <div className="showcase-thumb">
+                  {x.kind==="photo"&&src?<img src={src} alt="Selected profile photo"/>:x.kind==="video"&&src?<video muted playsInline preload="metadata" src={src}/>:x.kind==="voice"&&src?<div className="showcase-audio-thumb">🎙️</div>:<span>Media</span>}
+                </div>
+                <div className="showcase-preview-copy"><b>{x.kind==="photo"?"📸 Profile photo":x.kind==="voice"?"🎙️ Voice intro":"🎥 Video intro"}</b><span>Added to your profile</span></div>
+                <button type="button" className="chip" onClick={()=>setProfileDraft((d:any)=>({...d,profileShowcase:(d.profileShowcase||[]).filter((_:any,j:number)=>j!==i)}))}>Remove</button>
+              </div>
+            })}
           </div>}
           <div className="showcase-sticker-picker">
             <b>🧩 Pick your personality stickers</b><span className="safe">Choose up to 8. These are visual hints, not labels.</span>
