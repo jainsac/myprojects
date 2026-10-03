@@ -10,7 +10,7 @@ export async function GET(){
   const db=getDb();
   const rows=await db.select().from(notifications).where(eq(notifications.isActive,true));
   const city=current.profile?.city||"";
-  const filtered=rows.filter(n=>n.audience==="all" || (n.audience==="active" && current.user.status==="active") || (n.audience==="city" && n.city===city));
+  const filtered=rows.filter(n=>n.targetUserId===current.user.id || n.audience==="all" || (n.audience==="active" && current.user.status==="active") || (n.audience==="city" && n.city===city));
   const reads=await db.select({id:notificationReads.notificationId}).from(notificationReads).where(eq(notificationReads.userId,current.user.id));
   const readSet=new Set(reads.map(x=>x.id));
   return NextResponse.json({notifications:filtered.map(n=>({...n,read:readSet.has(n.id)}))});
