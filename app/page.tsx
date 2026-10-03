@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { decryptChatMessage, encryptChatMessage, registerChatPublicKey } from "../lib/chat-crypto";
 import { upload } from "@vercel/blob/client";
 
-type Tab = "discover" | "lounge" | "matches" | "dates" | "profile";
+type Tab = "discover" | "lounge" | "matches" | "dates" | "bottle" | "profile";
 type Person = { name: string; age: number; city: string; initial: string; tags: string[]; score: number };
 
 const people: Person[] = [
@@ -100,6 +100,12 @@ export default function Home() {
   const [referralOpen, setReferralOpen] = useState(false);
   const [referralData, setReferralData] = useState<any>(null);
   const [referralBusy, setReferralBusy] = useState(false);
+  const [bottleOpen, setBottleOpen] = useState(false);
+  const [bottleData, setBottleData] = useState<any>(null);
+  const [bottleText, setBottleText] = useState("");
+  const [bottleMedia, setBottleMedia] = useState<any[]>([]);
+  const [bottleBusy, setBottleBusy] = useState(false);
+  const [openedBottle, setOpenedBottle] = useState<any>(null);
   const [boostDuration, setBoostDuration] = useState("30");
   const [loungeFilter, setLoungeFilter] = useState("All");
   const [roomOpen, setRoomOpen] = useState<any>(null);
@@ -182,6 +188,32 @@ export default function Home() {
   const passwordStrength = authForm.password.length===0 ? "" : Object.values(passwordChecks).filter(Boolean).length <= 2 ? "Weak" : Object.values(passwordChecks).filter(Boolean).length < 5 ? "Medium" : "Strong";
   async function submitAuth(e: React.FormEvent) { e.preventDefault(); setAuthBusy(true); setAuthError(""); if(authMode==="register" && !passwordValid){ setAuthBusy(false); setAuthError("Password does not meet all requirements. Please complete the items shown below."); return; } const endpoint=authMode==="login"?"/api/auth/login":"/api/auth/register"; const payload=authMode==="login"?{email:authForm.email,password:authForm.password}:authForm; try { const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Authentication failed"); setUser(await fetch("/api/me").then(x=>x.json())); if(authMode==="register"){const ref=new URLSearchParams(window.location.search).get("ref"); if(ref) await fetch("/api/referral",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:ref})}).catch(()=>{}); setProfileOnboarding(true);setOnboardingPromptOpen(true);setTab("discover");} } catch(err){setAuthError(err instanceof Error?err.message:"Authentication failed");} finally{setAuthBusy(false);} }
   async function openReferral(){setReferralOpen(true);setReferralBusy(true);try{const r=await fetch("/api/referral");const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load referrals");setReferralData(d);}catch(e){notify(e instanceof Error?e.message:"Could not load referral program");}finally{setReferralBusy(false);}}
+  async function loadBottle(){
+    setBottleBusy(true);
+    try{const r=await fetch("/api/bottle");const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load bottles");setBottleData(d);if(d.opened?.length){}}
+    catch(e){notify(e instanceof Error?e.message:"Could not load bottles");}finally{setBottleBusy(false);}
+  }
+  async function openBottleCenter(){setBottleOpen(true);await loadBottle();}
+  async function addBottleMedia(file:File,kind:"photo"|"video"){
+    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    if(file.size>max){notify(\`Keep \${kind} under \${kind==="photo"?"5MB":"25MB"}\`);return;}
+    setBottleBusy(true);
+    try{
+      const blob=await upload(\`profile-media/\${user?.user?.id||user?.id}/bottle-\${kind}-\${Date.now()}-\${file.name.replace(/[^a-zA-Z0-9._-]/g,"")}\`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload"});
+      setBottleMedia(m=>[...m,{kind,pathname:blob.pathname}]);
+    }catch(e){notify(e instanceof Error?e.message:"Could not upload bottle media");}finally{setBottleBusy(false);}
+  }
+  async function bottleAction(action:string,id:string){
+    setBottleBusy(true);
+    try{const r=await fetch("/api/bottle",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Bottle action failed");if(action==="open"||action==="connect")setOpenedBottle(d.bottle||null);await loadBottle();if(action==="connect")notify("Connection request sent.");}
+    catch(e){notify(e instanceof Error?e.message:"Bottle action failed");}finally{setBottleBusy(false);}
+  }
+  async function throwBottle(){
+    if(!bottleText.trim()&&!bottleMedia.length){notify("Add a message or media first.");return;}
+    setBottleBusy(true);
+    try{const r=await fetch("/api/bottle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:bottleText,media:bottleMedia})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not throw bottle");setBottleText("");setBottleMedia([]);await loadBottle();notify("🌊 Your bottle is now drifting through Cuddl.");}
+    catch(e){notify(e instanceof Error?e.message:"Could not throw bottle");}finally{setBottleBusy(false);}
+  }
   async function saveDiscoveryPreference(value:string){ setDesiredGender(value); setGenderSaving(true); try { const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({desiredGender:value})}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not save preference"); setUser((current:any)=>current?{...current,profile:d.profile}:current); const a=await fetch("/api/discover",{cache:"no-store"}); const ad=await a.json(); if(Array.isArray(ad.profiles)) { setDiscoverProfiles(ad.profiles); setIndex(0); setPhotoIndexes({}); } notify(value==="ANY"?"Showing all genders":"Showing "+value.toLowerCase().replace("_"," ")+" profiles"); } catch(err){ notify(err instanceof Error?err.message:"Could not save preference"); } finally { setGenderSaving(false); } }
   function openProfileEditor(){
     setOnboardingPromptOpen(false);
@@ -738,6 +770,26 @@ export default function Home() {
           <div className="panel"><b>✦ Chemistry Date</b><p className="sub">Café + live acoustic set · 90 min · ₹800–₹1,200 · public venue</p><button className="btn" onClick={() => setRoomOpen({type:"Date Studio",icon:"✦",name:"Chemistry Date ideas",meta:"3 low-pressure public-date concepts created from shared interests"})}>Create ideas</button></div>
           <div className="panel"><b>🛟 Date Safety</b><p className="sub">Share plan, trusted contact and arrival check-in.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Safety",icon:"🛟",name:"Date Safety Center",meta:"Share plan, trusted contact and arrival check-in"})}>Open Safety Center</button></div>
           <div className="panel"><b>💌 Date Capsule</b><p className="sub">Both answer one question. Answers unlock together after the date.</p><button className="btn ghost" onClick={() => setRoomOpen({type:"Date Capsule",icon:"💌",name:"Date Capsule",meta:"Create a question for both people to answer"})}>Create capsule</button></div>
+        </>}
+
+        {tab === "bottle" && <>
+          <div className="eyebrow">Exclusive Pro & Premium</div>
+          <h1 className="hero-title">🌊 Message in a Bottle</h1>
+          <p className="sub">Send a little piece of yourself into the Cuddl ocean. Someone unexpected may discover it.</p>
+          <div className="panel bottle-hero">
+            <div className="bottle-ocean">🌊 🫧 🐚 🫧 🌊</div>
+            <div><b>{bottleData?.plan==="PREMIUM"?"Premium":"Pro"} bottle allowance</b><p className="sub">{bottleData?.plan==="PREMIUM"?"5":"2"} bottles per month · one active bottle at a time</p></div>
+          </div>
+          {bottleBusy&&<p className="safe">Updating bottle…</p>}
+          {bottleData?.incoming&&<div className="panel bottle-incoming"><div className="eyebrow">You found a bottle</div><h2>🧴 Someone left you a message</h2><p className="sub">Open it to discover what they chose to share. Their identity stays hidden until you choose to connect.</p><button className="btn" disabled={bottleBusy} onClick={()=>bottleAction("open",bottleData.incoming.id)}>Open bottle</button></div>}
+          {openedBottle&&<div className="panel bottle-opened"><div className="eyebrow">Bottle opened</div><h2>✨ A little mystery revealed</h2><p className="bottle-text">{openedBottle.text}</p>{Array.isArray(openedBottle.media)&&<div className="bottle-media-grid">{openedBottle.media.map((m:any,i:number)=>{const src="/api/profile/media?pathname="+encodeURIComponent(m.pathname);return <div key={m.pathname||i}>{m.kind==="photo"?<img src={src} alt="Bottle"/>:m.kind==="video"?<video controls playsInline src={src}/>:null}</div>})}</div>}<div className="actions"><button className="btn" disabled={bottleBusy} onClick={()=>bottleAction("connect",openedBottle.id)}>💗 Connect</button><button className="btn ghost" disabled={bottleBusy} onClick={()=>bottleAction("pass",openedBottle.id)}>Pass</button><button className="btn ghost" disabled={bottleBusy} onClick={()=>bottleAction("report",openedBottle.id)}>Report</button></div></div>}
+          {!openedBottle&&!bottleData?.incoming&&<div className="panel"><div className="eyebrow">Create your bottle</div><h2>What would you send into the unknown?</h2><textarea className="field profile-textarea" maxLength={700} placeholder="Write something genuine, playful or curious…" value={bottleText} onChange={e=>setBottleText(e.target.value)}/>
+            <div className="bottle-upload-row"><label className="prompt-media-btn">📸 Photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"photo");e.currentTarget.value=""}}/></label><label className="prompt-media-btn">🎥 Video<input type="file" accept="video/*" onChange={e=>{const f=e.target.files?.[0];if(f)addBottleMedia(f,"video");e.currentTarget.value=""}}/></label><button className="prompt-media-btn" onClick={async()=>{if(!navigator.mediaDevices?.getUserMedia){notify("Voice recording is not supported");return;}try{const s=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(s);const chunks:Blob[]=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);rec.onstop=async()=>{s.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});const file=new File([blob],"bottle-voice.webm",{type:blob.type});const b=await upload(\`profile-media/\${user?.user?.id||user?.id}/bottle-voice-\${Date.now()}.webm\`,file,{access:"private",handleUploadUrl:"/api/profile/media/upload"});setBottleMedia(m=>[...m,{kind:"voice",pathname:b.pathname}]);};rec.start();setTimeout(()=>rec.state==="recording"&&rec.stop(),20000);notify("Recording voice note…");}catch{notify("Microphone permission was not granted")}}}>🎙️ Voice</button></div>
+            {bottleMedia.length>0&&<div className="bottle-media-list">{bottleMedia.map((m,i)=><div key={m.pathname||i}>{m.kind==="photo"?"📸 Photo":m.kind==="video"?"🎥 Video":"🎙️ Voice note"} <button className="chip" onClick={()=>setBottleMedia(x=>x.filter((_,j)=>j!==i))}>Remove</button></div>)}</div>}
+            <button className="btn" disabled={bottleBusy} onClick={throwBottle}>🌊 Throw bottle into the ocean</button>
+          </div>}
+          {bottleData?.active&&<div className="panel"><b>🌊 Your bottle is drifting</b><p className="sub">You can throw another bottle only after this one has been opened. Monthly usage: {bottleData.usedThisMonth}/{bottleData.plan==="PREMIUM"?5:2}.</p></div>}
+          {bottleData?.plan==="BASIC"&&<div className="panel"><b>🔒 Pro & Premium feature</b><p className="sub">Message in a Bottle is reserved for Pro and Premium members. Upgrade when billing is available.</p><button className="btn ghost" onClick={()=>openLegal("/plans")}>View plans</button></div>}
         </>}
 
         {tab === "profile" && <>
