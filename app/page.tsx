@@ -72,6 +72,8 @@ export default function Home() {
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [matchFilters, setMatchFilters] = useState({company:"",profession:"",religion:"",community:""});
+  const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => {
@@ -173,7 +175,19 @@ export default function Home() {
     } catch(err) { notify(err instanceof Error?err.message:"Could not send encrypted message"); }
     finally { setChatBusy(false); }
   }
-  const person = useMemo(() => discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length], [index, discoverProfiles]);
+  const searchableProfiles = useMemo(() => discoverProfiles.filter((p:any) => {
+    const lp=p.lifestylePreferences||{};
+    return Object.entries(matchFilters).every(([key,value]) => !value.trim() || String(lp[key]||"").toLowerCase().includes(value.trim().toLowerCase()));
+  }), [discoverProfiles,matchFilters]);
+  const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : (discoverProfiles.length ? discoverProfiles[index % discoverProfiles.length] : people[index % people.length]), [index, searchableProfiles, discoverProfiles]);
+  const personPhotos = useMemo(() => {
+    const p:any=person||{};
+    const lp=p.lifestylePreferences||{};
+    const photos=Array.isArray(lp.photos)?lp.photos.filter(Boolean):[];
+    return Array.from(new Set([p.avatarUrl,...photos].filter(Boolean)));
+  }, [person]);
+  function changePhoto(id:string,total:number,delta:number){setPhotoIndexes(v=>({...v,[id]:((v[id]||0)+delta+total)%total}));}
+  
 
   async function startFreeCamera(angle:"front"|"left"|"right"=cameraAngle){
     if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){notify("Camera needs a secure HTTPS page and a supported browser");return;}
@@ -286,17 +300,31 @@ export default function Home() {
           <p className="sub">Discover people, then play, listen, explore and let chemistry happen naturally.</p>
 
           <section className="panel">
-            <div className="eyebrow">Daily Spark</div>
-            <div className="profile-row">
-              <div className="avatar">{person.initial}</div>
+            <div className="eyebrow">Normal Search</div>
+            <div className="discover-photo">
+              {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
+              {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
+            </div>
+            <div className="profile-row" style={{marginTop:12}}>
               <div className="grow"><b>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</b><div className="sub">⌖ {person.city} · Active today</div><div>{(person.tags ?? []).map((t:string) => <span className="tag" key={t}>{t}</span>)}</div></div>
-              <span className="score">{person.score}%</span>
+              <span className="score">{person.score||88}%</span>
             </div>
             <p className="sub">{person.bio || "Looking for someone kind, curious and ready for real conversations."}</p>
             <div className="actions">
               <button className="btn ghost" onClick={() => { setIndex(i => i + 1); notify("Passed — suggestions tuned"); }}>Pass</button>
               <button className="btn" onClick={spark}>♥ Send Spark</button>
             </div>
+          </section>
+          <section className="panel">
+            <div className="eyebrow">Match Finder</div>
+            <p className="sub">Search profiles by Company, Profession, Religion or Community. Leave any field blank to ignore it.</p>
+            <div className="filter-grid">
+              <input className="field" placeholder="Company" value={matchFilters.company} onChange={e=>setMatchFilters({...matchFilters,company:e.target.value})}/>
+              <input className="field" placeholder="Profession" value={matchFilters.profession} onChange={e=>setMatchFilters({...matchFilters,profession:e.target.value})}/>
+              <input className="field" placeholder="Religion" value={matchFilters.religion} onChange={e=>setMatchFilters({...matchFilters,religion:e.target.value})}/>
+              <input className="field" placeholder="Community" value={matchFilters.community} onChange={e=>setMatchFilters({...matchFilters,community:e.target.value})}/>
+            </div>
+            <div className="actions"><button className="btn ghost" onClick={()=>{setMatchFilters({company:"",profession:"",religion:"",community:""});setIndex(0);}}>Clear filters</button><span className="safe">{searchableProfiles.length} matching profiles</span></div>
           </section>
 
           <section className="panel">
