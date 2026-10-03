@@ -22,3 +22,4 @@ jobs:
         run: npm run build:app
 
 # Keep the master push as a real Git event for the connected Vercel project.
+# Vercel production deploys from master.
