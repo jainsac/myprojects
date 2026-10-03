@@ -11,6 +11,21 @@ function sign(value:string){return createHmac("sha256",secret()).update(value).d
 function token(userId:string){return `${userId}.${sign(userId)}`;}
 function verify(value:string){const [id,sig]=value.split("."); if(!id||!sig)return null; const expected=sign(id); if(sig.length!==expected.length)return null; return timingSafeEqual(Buffer.from(sig),Buffer.from(expected))?id:null;}
 
+export function createMediaUploadToken(userId:string,ttlMs=10*60*1000){
+  const payload=Buffer.from(JSON.stringify({userId,exp:Date.now()+ttlMs})).toString("base64url");
+  return payload+"."+sign(payload);
+}
+export function verifyMediaUploadToken(value:string){
+  const [payload,sig]=String(value||"").split(".");
+  if(!payload||!sig)return null;
+  const expected=sign(payload);
+  if(sig.length!==expected.length || !timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return null;
+  try{
+    const parsed=JSON.parse(Buffer.from(payload,"base64url").toString("utf8"));
+    if(!parsed?.userId || Number(parsed.exp||0)<Date.now())return null;
+    return String(parsed.userId);
+  }catch{return null;}
+}
 export function hashPassword(password:string){const salt=randomBytes(16).toString("hex"); const hash=scryptSync(password,salt,64).toString("hex"); return `${salt}:${hash}`;}
 export function verifyPassword(password:string,stored:string){const [salt,hex]=stored.split(":"); if(!salt||!hex)return false; const hash=scryptSync(password,salt,64); const expected=Buffer.from(hex,"hex"); return expected.length===hash.length && timingSafeEqual(hash,expected);}
 
