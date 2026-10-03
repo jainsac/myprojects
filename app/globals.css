@@ -64,3 +64,10 @@
 .permission-card{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:17px;padding:12px;margin:9px 0;background:#fff}
 .permission-card>div{flex:1;min-width:0}.permission-card b,.permission-card span{display:block}.permission-card span{font-size:11px;color:var(--muted);line-height:1.4;margin-top:3px}.permission-card .btn{flex:none}
 @media(max-width:600px){.plan-grid{grid-template-columns:1fr}.policy-page h1{font-size:32px}.permission-card{align-items:flex-start;flex-direction:column}.permission-card .btn{width:100%}}
+
+.plan-highlight{border-width:2px;box-shadow:0 12px 36px rgba(216,55,95,.14)}
+.plan-prices{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0 14px}
+.plan-prices div{border:1px solid var(--line);border-radius:12px;padding:8px;background:#fffafb}
+.plan-prices span,.plan-prices b{display:block}.plan-prices span{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}.plan-prices b{font-size:14px;margin-top:2px}
+.plan-benefits{list-style:none;padding:0;margin:0 0 15px;display:grid;gap:6px}.plan-benefits li{font-size:11px;color:#51484b;line-height:1.35}
+.room{cursor:pointer}
