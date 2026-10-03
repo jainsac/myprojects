@@ -19,9 +19,30 @@ export async function PUT(request:Request){
     const desiredGender=body.desiredGender===undefined?String(existing.desiredGender||""):String(body.desiredGender||"").trim().toUpperCase();
     if(gender && !genders.includes(gender))return NextResponse.json({error:"Invalid gender selection."},{status:400});
     if(desiredGender && !desiredGenders.includes(desiredGender))return NextResponse.json({error:"Invalid discovery preference."},{status:400});
-    const allowedKeys=["state","foodPreference","food","diet","smoking","drinking","relationshipGoal","relationshipGoals","education","children","pets","exercise","language","languages","heightCm","height","verified","photos","company","profession","religion","community"];
-    const lifestylePreferences={...existing,gender:gender||undefined,desiredGender:desiredGender||undefined};
-    for(const key of allowedKeys){if(body[key]!==undefined) lifestylePreferences[key]=body[key];}
+    const lifestylePreferences={
+      ...existing,
+      gender:gender||undefined,
+      desiredGender:desiredGender||undefined,
+      state:body.state===undefined?existing.state:String(body.state||"").trim()||undefined,
+      foodPreference:body.foodPreference===undefined?existing.foodPreference:String(body.foodPreference||"").trim()||undefined,
+      food:body.food===undefined?existing.food:String(body.food||"").trim()||undefined,
+      diet:body.diet===undefined?existing.diet:String(body.diet||"").trim()||undefined,
+      smoking:body.smoking===undefined?existing.smoking:String(body.smoking||"").trim()||undefined,
+      drinking:body.drinking===undefined?existing.drinking:String(body.drinking||"").trim()||undefined,
+      relationshipGoal:body.relationshipGoal===undefined?existing.relationshipGoal:String(body.relationshipGoal||"").trim()||undefined,
+      education:body.education===undefined?existing.education:String(body.education||"").trim()||undefined,
+      children:body.children===undefined?existing.children:String(body.children||"").trim()||undefined,
+      pets:body.pets===undefined?existing.pets:String(body.pets||"").trim()||undefined,
+      exercise:body.exercise===undefined?existing.exercise:String(body.exercise||"").trim()||undefined,
+      language:body.language===undefined?existing.language:String(body.language||"").trim()||undefined,
+      heightCm:body.heightCm===undefined?existing.heightCm:Number(body.heightCm)||undefined,
+      verified:body.verified===undefined?existing.verified:!!body.verified,
+      photos:body.photos===undefined?existing.photos:Array.isArray(body.photos)?body.photos.map(String):existing.photos,
+      company:body.company===undefined?existing.company:String(body.company||"").trim()||undefined,
+      profession:body.profession===undefined?existing.profession:String(body.profession||"").trim()||undefined,
+      religion:body.religion===undefined?existing.religion:String(body.religion||"").trim()||undefined,
+      community:body.community===undefined?existing.community:String(body.community||"").trim()||undefined,
+    };
     const db=getDb();
     const [profile]=await db.update(profiles).set({
       displayName,
