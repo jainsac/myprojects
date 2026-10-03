@@ -213,7 +213,7 @@ export default function Home() {
         const key=group==="personality"?"personalityPrompts":"partnerPrompts";
         const arr=[...(d[key]||[])];
         const item={...(arr[index]||{question:"",answer:""})};
-        const media=[...(item.media||[])];
+        const media=Array.isArray(item.media)?[...item.media]:(item.media?.pathname?[item.media]:[]);
         media.push({kind,pathname:blob.pathname});
         item.media=media;
         arr[index]=item;
