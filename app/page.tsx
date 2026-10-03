@@ -76,7 +76,7 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],profileShowcase:[],personalityStickers:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",heightCm:""});
   const chatQuickItems=["👋 Hi there!","😂 That made me smile","😍 Love this","👀 Tell me more","🤭 You’re cute","🔥 Interesting!","❤️ Same here","🎯 Challenge accepted"];
   const [profileSaving, setProfileSaving] = useState(false);
   const [aiCoachEnabled, setAiCoachEnabled] = useState(false);
@@ -100,6 +100,11 @@ export default function Home() {
   const [loungeFilter, setLoungeFilter] = useState("All");
   const [roomOpen, setRoomOpen] = useState<any>(null);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
+  const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
+  const [showcaseBusy, setShowcaseBusy] = useState(false);
+  const showcaseRecorderRef = useRef<MediaRecorder | null>(null);
+  const showcaseStreamRef = useRef<MediaStream | null>(null);
+  const showcaseChunksRef = useRef<Blob[]>([]);
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user) return;
@@ -174,7 +179,7 @@ export default function Home() {
   function openProfileEditor(){
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts:[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts:[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts:[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),heightCm:String(lp.heightCm||"")});
     setProfileModal("edit");
   }
   async function requestAiChatCoach(){
@@ -187,6 +192,59 @@ export default function Home() {
       setAiCoachSuggestion(Array.isArray(d.suggestions)?d.suggestions:[]);
     }catch(err){notify(err instanceof Error?err.message:"AI coach unavailable");}
     finally{setAiCoachBusy(false);}
+  }
+
+  async function uploadProfileShowcase(file:File, kind:"photo"|"voice"|"video"){
+    if(!user?.user?.id && !user?.id)return;
+    const max=kind==="photo"?5*1024*1024:25*1024*1024;
+    if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"25MB"}`);return;}
+    setShowcaseBusy(true);
+    try{
+      const ext=(file.name.split(".").pop()||({photo:"jpg",voice:"webm",video:"webm"} as any)[kind]).toLowerCase();
+      const blob=await upload(`profile-media/${user?.user?.id||user?.id}/${kind}-${Date.now()}.${ext}`,file,{
+        access:"private",
+        handleUploadUrl:"/api/profile/media/upload"
+      });
+      const item={kind,pathname:blob.pathname,prompt:kind==="voice"?"🎙️ My voice":"🎥 My vibe"};
+      setProfileDraft((d:any)=>({...d,profileShowcase:[...(d.profileShowcase||[]).filter((x:any)=>x.kind!==kind),item]}));
+      notify(kind==="photo"?"Photo added to your showcase":kind==="voice"?"Voice intro added":"Video intro added");
+    }catch(err){notify(err instanceof Error?err.message:"Could not upload showcase media");}
+    finally{setShowcaseBusy(false);}
+  }
+  function handleShowcaseFile(e:React.ChangeEvent<HTMLInputElement>,kind:"photo"|"video"){
+    const file=e.target.files?.[0]; if(!file)return;
+    uploadProfileShowcase(file,kind);
+    e.currentTarget.value="";
+  }
+  async function startShowcaseRecording(kind:"voice"|"video"){
+    if(showcaseRecording)return;
+    if(!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder==="undefined"){notify("Recording is not supported in this browser");return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==="video"});
+      showcaseStreamRef.current=stream;
+      const preferred=kind==="video"?"video/webm;codecs=vp9,opus":"audio/webm;codecs=opus";
+      const mime=MediaRecorder.isTypeSupported(preferred)?preferred:(kind==="video"?"video/webm":"audio/webm");
+      const recorder=new MediaRecorder(stream,{mimeType:mime});
+      showcaseChunksRef.current=[];
+      recorder.ondataavailable=(e)=>{if(e.data.size)showcaseChunksRef.current.push(e.data);};
+      recorder.onstop=async()=>{
+        const blob=new Blob(showcaseChunksRef.current,{type:mime});
+        const ext=kind==="video"?"webm":"webm";
+        await uploadProfileShowcase(new File([blob],`cuddl-${kind}-${Date.now()}.${ext}`,{type:mime}),kind);
+        stream.getTracks().forEach(t=>t.stop());
+        showcaseStreamRef.current=null;
+      };
+      recorder.start();
+      showcaseRecorderRef.current=recorder;
+      setShowcaseRecording(kind);
+      window.setTimeout(()=>{if(showcaseRecorderRef.current?.state==="recording")stopShowcaseRecording();},kind==="video"?15000:20000);
+    }catch(err){notify(err instanceof DOMException && err.name==="NotAllowedError"?"Microphone/camera permission was denied":"Could not start recording");}
+  }
+  function stopShowcaseRecording(){
+    const recorder=showcaseRecorderRef.current;
+    if(recorder && recorder.state!=="inactive")recorder.stop();
+    showcaseRecorderRef.current=null;
+    setShowcaseRecording(null);
   }
 
   async function saveProfile(){
@@ -481,6 +539,15 @@ export default function Home() {
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
             {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card" key={"personality-"+i}><small>ABOUT ME</small><b>{x.question}</b><span>{x.answer}</span></div>)}
             {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=><div className="prompt-card partner-prompt" key={"partner-"+i}><small>WHAT I VALUE IN A PARTNER</small><b>{x.question}</b><span>{x.answer}</span></div>)}
+            {Array.isArray(person.lifestylePreferences?.profileShowcase)&&person.lifestylePreferences.profileShowcase.slice(0,3).map((x:any,i:number)=>{
+              const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
+              return <div className="showcase-card" key={"showcase-"+i}>
+                <div className="showcase-label">{x.kind==="photo"?"📸 PHOTO PROMPT":x.kind==="voice"?"🎙️ VOICE PROMPT":"🎥 VIDEO PROMPT"}</div>
+                {x.kind==="photo"&&src?<img src={src} alt="Profile showcase"/>:x.kind==="voice"&&src?<audio controls preload="metadata" src={src}/>:x.kind==="video"&&src?<video controls playsInline preload="metadata" src={src}/>:null}
+                {x.prompt&&<span>{x.prompt}</span>}
+              </div>
+            })}
+            {Array.isArray(person.lifestylePreferences?.personalityStickers)&&person.lifestylePreferences.personalityStickers.length>0&&<div className="showcase-stickers">{person.lifestylePreferences.personalityStickers.slice(0,8).map((s:string)=><span className="personality-sticker" key={s}>{s}</span>)}</div>}
             <div className="detail-grid">
               <div><small>Company</small><b>{person.lifestylePreferences?.company||"—"}</b></div>
               <div><small>Profession</small><b>{person.lifestylePreferences?.profession||"—"}</b></div>
@@ -642,6 +709,25 @@ export default function Home() {
               <textarea className="field profile-textarea" maxLength={220} placeholder="Your answer…" value={item.answer} onChange={e=>{const a=[...(profileDraft.personalityPrompts||[])];a[i]={question:item.question,answer:e.target.value};setProfileDraft({...profileDraft,personalityPrompts:a})}} />
             </div>
           })}
+          <div className="filter-section-title">🎨 Personality Showcase</div>
+          <p className="safe">Go beyond text. Add one photo, a short voice intro, a quick video, and a few personality stickers. These make your profile easier to explore.</p>
+          <div className="showcase-upload-grid">
+            <label className="showcase-upload"><span>📸</span><b>Add photo</b><small>Show a moment that feels like you</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>handleShowcaseFile(e,"photo")} /></label>
+            <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="voice"?stopShowcaseRecording():startShowcaseRecording("voice")} disabled={showcaseBusy}><span>🎙️</span><b>{showcaseRecording==="voice"?"Stop voice":"Record voice"}</b><small>Up to 20 seconds</small></button>
+            <button type="button" className="showcase-upload" onClick={()=>showcaseRecording==="video"?stopShowcaseRecording():startShowcaseRecording("video")} disabled={showcaseBusy}><span>🎥</span><b>{showcaseRecording==="video"?"Stop video":"Record video"}</b><small>Up to 15 seconds</small></button>
+          </div>
+          {Array.isArray(profileDraft.profileShowcase)&&profileDraft.profileShowcase.length>0&&<div className="showcase-preview-list">
+            {profileDraft.profileShowcase.map((x:any,i:number)=><div className="showcase-preview" key={x.pathname||i}><b>{x.kind==="photo"?"📸 Photo":x.kind==="voice"?"🎙️ Voice intro":"🎥 Video intro"}</b><span>{x.pathname?"Added to your profile":"Not uploaded"}</span><button type="button" className="chip" onClick={()=>setProfileDraft((d:any)=>({...d,profileShowcase:(d.profileShowcase||[]).filter((_:any,j:number)=>j!==i)}))}>Remove</button></div>)}
+          </div>}
+          <div className="showcase-sticker-picker">
+            <b>🧩 Pick your personality stickers</b><span className="safe">Choose up to 8. These are visual hints, not labels.</span>
+            <div className="chips">
+              {["☕ Coffee Person","🎵 Music Lover","✈️ Traveller","🍜 Foodie","🐶 Dog Lover","📚 Bookworm","🏃 Fitness","🎨 Creative","🌿 Nature","🎮 Gamer","😂 Funny","🌙 Night Owl"].map(s=>{
+                const selected=(profileDraft.personalityStickers||[]).includes(s);
+                return <button type="button" className={"chip "+(selected?"active":"")} key={s} onClick={()=>setProfileDraft((d:any)=>({...d,personalityStickers:selected?(d.personalityStickers||[]).filter((x:string)=>x!==s):[...(d.personalityStickers||[]),s].slice(0,8)}))}>{s}</button>
+              })}
+            </div>
+          </div>
           <div className="filter-section-title">❤️ What I value in a partner</div>
           <p className="safe">These help Cuddl understand compatibility. You control what you reveal.</p>
           {[0,1,2].map((i:number)=>{
