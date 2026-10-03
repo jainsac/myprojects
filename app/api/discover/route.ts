@@ -14,7 +14,7 @@ export async function GET() {
   if (blockedIds.length) conditions.push(notInArray(users.id, blockedIds));
   const rows = await db.select({
     id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio,
-    avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals,
+    avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals, lifestylePreferences: profiles.lifestylePreferences,
   }).from(users).innerJoin(profiles, eq(profiles.userId, users.id)).where(and(...conditions)).limit(30);
   const sent = await db.select({ toUserId: sparks.toUserId }).from(sparks).where(eq(sparks.fromUserId, current.user.id));
   const sentIds = new Set(sent.map(x => x.toUserId));
