@@ -40,3 +40,6 @@ The current branch contains the interactive prototype in index.html. Demo state 
 ## Next.js migration
 The app now has a Next.js App Router foundation in `app/`, while the original interactive prototype is preserved at `public/prototype.html` for reference. The current UI is intentionally service-free: real authentication, PostgreSQL persistence, realtime presence/game state, WebRTC media, notifications and moderation require provisioned production services and environment variables.
 
+
+
+<!-- deployment trigger -->
