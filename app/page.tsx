@@ -87,6 +87,10 @@ export default function Home() {
 });
   const [profileOnboarding, setProfileOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<string>("unsupported");
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
@@ -98,6 +102,7 @@ export default function Home() {
     setOnboardingChecked(true);
   }, [user]);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
+  useEffect(() => { if(!user) return; setLocationGranted(!!user?.profile?.lifestylePreferences?.locationGranted); if(typeof Notification!=="undefined") setNotificationPermission(Notification.permission); }, [user]);
   useEffect(() => {
     if(!user)return;
     registerChatPublicKey().catch(() => notify("Secure chat setup needs browser storage permission."));
@@ -169,10 +174,27 @@ export default function Home() {
       const complete=!!d.profile?.displayName && !!d.profile?.city && !!lp.state && !!lp.gender && !!lp.desiredGender && String(d.profile?.bio||"").trim().length>=10;
       setProfileOnboarding(!complete);
       setProfileModal(complete?null:"edit");
-      if(complete){setTab("discover");notify("Profile complete — welcome to Discover");} else notify("Please complete the required profile details");
+      if(complete){setTab("discover");setPermissionsOpen(true);notify("Profile complete — finish your privacy & permission setup");} else notify("Please complete the required profile details");
     }catch(err){notify(err instanceof Error?err.message:"Could not save profile");}
     finally{setProfileSaving(false);}
   }
+  async async function requestLocation(){
+    if(!navigator.geolocation){notify("Location is not supported by this browser");return;}
+    setLocationBusy(true);
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      try{
+        const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({locationLatitude:pos.coords.latitude,locationLongitude:pos.coords.longitude,locationAccuracy:pos.coords.accuracy,locationGranted:true})});
+        const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not save location permission");
+        setUser((current:any)=>current?{...current,profile:d.profile}:current); setLocationGranted(true); notify("Location enabled for nearby discovery");
+      }catch(err){notify(err instanceof Error?err.message:"Could not save location");}
+      finally{setLocationBusy(false);}
+    },err=>{setLocationBusy(false);notify(err.code===1?"Location permission was denied. Enable it in browser settings to use distance discovery.":"Could not read your location");},{enableHighAccuracy:false,maximumAge:300000,timeout:10000});
+  }
+  async function requestNotifications(){
+    if(typeof Notification==="undefined"){notify("Notifications are not supported in this browser");return;}
+    try{const p=await Notification.requestPermission();setNotificationPermission(p);notify(p==="granted"?"Notifications enabled":"Notifications remain off — you can enable them later");}catch{notify("Could not request notification permission");}
+  }
+  function openLegal(path:string){window.location.href=path;}
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setChatMatch(null);notify("Signed out");}
   async function loadEncryptedChat(matchId:string){
     const r=await fetch("/api/messages?matchId="+encodeURIComponent(matchId),{cache:"no-store"});
@@ -494,7 +516,7 @@ export default function Home() {
         {tab === "profile" && <>
           <div className="eyebrow">Your space · {city}</div><h1 className="hero-title">Profile, privacy & trust.</h1>
           <div className="panel"><div className="profile-row"><div className="avatar">S</div><div><b>Your profile</b><div className="sub">82% complete · Add voice intro</div></div></div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={() => setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={() => setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div></div>
-          <div className="panel"><b>Privacy controls</b><p className="safe">Incognito · block contacts · private albums · activity visibility. Native mobile builds can use platform screenshot protections; browsers cannot guarantee screenshot prevention.</p><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button></div>
+          <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions"><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
           <div className="grid">
             {[
               ["🧭","Relationship Compass","Compare goals, communication and lifestyle preferences."],
@@ -565,6 +587,16 @@ export default function Home() {
         <input className="field" type="email" autoComplete="email" placeholder="you@example.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)}/>
         <button className="btn" onClick={()=>{setForgotOpen(false);notify(forgotEmail.trim()?"Reset email flow is pending email setup":"Enter your registered email")}}>Continue</button>
         <button className="btn ghost" onClick={()=>setForgotOpen(false)}>Close</button>
+      </div></div>}
+      {permissionsOpen && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
+        <div className="eyebrow">Privacy & permissions setup</div><h2>One last setup before you discover.</h2>
+        <p className="sub">Cuddl asks only for permissions used by a feature. Location is required for distance-based discovery. Camera and microphone are requested when you use verification or voice features. Notifications are optional.</p>
+        <div className="permission-card"><div><b>📍 Location · Required for discovery</b><span>{locationGranted?"Enabled":"Use approximate/foreground location for distance discovery; precise location is not shown to other members."}</span></div><button className="btn" onClick={requestLocation} disabled={locationBusy||locationGranted}>{locationGranted?"Enabled ✓":locationBusy?"Requesting…":"Enable"}</button></div>
+        <div className="permission-card"><div><b>🔔 Notifications · Recommended</b><span>{notificationPermission==="granted"?"Enabled":"Match, message and safety updates. You can change this anytime."}</span></div><button className="btn ghost" onClick={requestNotifications} disabled={notificationPermission==="granted"||notificationPermission==="denied"}>{notificationPermission==="granted"?"Enabled ✓":notificationPermission==="denied"?"Blocked":"Enable"}</button></div>
+        <div className="permission-card"><div><b>📷 Camera & 🎙️ microphone · Contextual</b><span>Requested only when you start identity verification, voice intro or a supported call.</span></div><button className="btn ghost" onClick={()=>{setPermissionsOpen(false);setVerificationOpen(true);}}>Test camera</button></div>
+        <div className="safe">We do not request broad contacts access or background location just for convenience. You can manage permissions from your device/browser settings.</div>
+        <button className="btn" disabled={!locationGranted} onClick={()=>setPermissionsOpen(false)}>{locationGranted?"Continue to Cuddl":"Enable location to continue"}</button>
+        <button className="btn ghost" onClick={()=>setPermissionsOpen(false)}>Close</button>
       </div></div>}
       {profileOnboarding && onboardingChecked && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
         <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
