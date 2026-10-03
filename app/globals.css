@@ -198,3 +198,5 @@
   .profile-editor-inner{width:min(540px,100%)}
   .profile-extended-grid,.profile-row{display:flex;flex-direction:column}
 }
+
+/* Vercel production deployment trigger — mobile profile editor */
