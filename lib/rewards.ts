@@ -70,6 +70,7 @@ export function ensureRewardsSchema(){
       );
       CREATE INDEX IF NOT EXISTS offer_redemptions_user_idx ON offer_redemptions(user_id);
     `);
+    await db.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id uuid REFERENCES users(id) ON DELETE CASCADE`);
     await db.execute(sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
     await db.execute(sql\`
       CREATE TABLE IF NOT EXISTS bottle_settings (
