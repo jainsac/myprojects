@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 import { getCurrentUser } from "../../../../../lib/auth";
 
-const allowed=["image/jpeg","image/png","image/webp","audio/webm","audio/mp4","audio/mpeg","video/webm","video/mp4"];
+const allowed=["image/*","audio/*","video/*"];
 
 export async function POST(request:Request){
   const current=await getCurrentUser();
@@ -17,7 +17,7 @@ export async function POST(request:Request){
         if(!pathname.startsWith(prefix)) throw new Error("Invalid profile media path.");
         return {
           allowedContentTypes:allowed,
-          maximumSizeInBytes:25*1024*1024,
+          maximumSizeInBytes:50*1024*1024,
           addRandomSuffix:true,
           tokenPayload:JSON.stringify({userId:current.user.id})
         };
