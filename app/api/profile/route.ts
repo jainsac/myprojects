@@ -37,6 +37,7 @@ export async function PUT(request:Request){
       drinking:body.drinking===undefined?existing.drinking:String(body.drinking||"").trim()||undefined,
       relationshipGoal:body.relationshipGoal===undefined?existing.relationshipGoal:String(body.relationshipGoal||"").trim()||undefined,
       education:body.education===undefined?existing.education:String(body.education||"").trim()||undefined,
+      qualification:body.qualification===undefined?existing.qualification:String(body.qualification||"").trim()||undefined,
       children:body.children===undefined?existing.children:String(body.children||"").trim()||undefined,
       pets:body.pets===undefined?existing.pets:String(body.pets||"").trim()||undefined,
       exercise:body.exercise===undefined?existing.exercise:String(body.exercise||"").trim()||undefined,
