@@ -71,6 +71,31 @@ export function ensureRewardsSchema(){
       CREATE INDEX IF NOT EXISTS offer_redemptions_user_idx ON offer_redemptions(user_id);
     `);
     await db.execute(sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
+    await db.execute(sql\`
+      CREATE TABLE IF NOT EXISTS bottle_settings (
+        id integer PRIMARY KEY DEFAULT 1,
+        pro_monthly_limit integer NOT NULL DEFAULT 2,
+        premium_monthly_limit integer NOT NULL DEFAULT 5,
+        open_timeout_days integer NOT NULL DEFAULT 30,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS bottles (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        content_text text,
+        media jsonb NOT NULL DEFAULT '[]'::jsonb,
+        status text NOT NULL DEFAULT 'ACTIVE',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        opened_at timestamptz,
+        expires_at timestamptz,
+        opened_action text,
+        connection_requested boolean NOT NULL DEFAULT false
+      );
+      CREATE INDEX IF NOT EXISTS bottles_sender_status_idx ON bottles(sender_id,status);
+      CREATE INDEX IF NOT EXISTS bottles_receiver_status_idx ON bottles(receiver_id,status);
+    \`);
+    await db.execute(sql\`INSERT INTO bottle_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING\`);
   })();
   return ready;
 }
