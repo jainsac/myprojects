@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { del } from "@vercel/blob";
 import { requireAdmin } from "../../../../lib/auth";
 import { getDb } from "../../../../lib/db";
-import { identityVerifications, profiles, users } from "../../../../lib/db/schema";
+import { identityVerifications, profiles, users, notifications } from "../../../../lib/db/schema";
 
 const FINAL=new Set(["verified","rejected","restricted"]);
 const captureKeys=["selfieFrontUrl","selfieLeftUrl","selfieRightUrl"] as const;
@@ -37,7 +37,26 @@ export async function PATCH(request:Request){
     const db=getDb();
     const rows=await db.select().from(identityVerifications).where(eq(identityVerifications.userId,userId)).limit(1);
     const row=rows[0]; if(!row) return NextResponse.json({error:"Verification record not found."},{status:404});
+    const requestInfo=String(body.requestInfo||"").trim().slice(0,1200);
+    const profileRows=await db.select({verification:profiles.verification}).from(profiles).where(eq(profiles.userId,userId)).limit(1);
+    const currentVerification=(profileRows[0]?.verification||{}) as Record<string,any>;
+
+    if(action==="rejected" && !requestInfo){
+      return NextResponse.json({error:"Please tell the user what additional information or document is required."},{status:400});
+    }
+
     if(FINAL.has(action)) await deleteCaptures(row);
+
+    const nextVerification={
+      ...currentVerification,
+      adminVerificationStatus:action==="verified"?"verified":action,
+      adminVerifiedAt:action==="verified"?new Date().toISOString():null,
+      photoVerified:action==="verified",
+      aiAutoVerified:!!currentVerification.aiAutoVerified,
+      reverificationRequest:action==="rejected"?requestInfo:null,
+      rejectionReason:action==="rejected"?requestInfo:null,
+    };
+
     await db.update(identityVerifications).set({
       status:action as any,
       verifiedAt:action==="verified"?new Date():null,
@@ -45,9 +64,25 @@ export async function PATCH(request:Request){
       selfieLeftUrl:FINAL.has(action)?null:row.selfieLeftUrl,
       selfieRightUrl:FINAL.has(action)?null:row.selfieRightUrl,
       updatedAt:new Date(),
-      providerReference:FINAL.has(action)?JSON.stringify({decision:action,decidedAt:new Date().toISOString()}):row.providerReference
+      providerReference:JSON.stringify({decision:action,decidedAt:new Date().toISOString(),requestInfo:requestInfo||undefined,previous:row.providerReference||null})
     }).where(eq(identityVerifications.userId,userId));
-    return NextResponse.json({ok:true,status:action});
+
+    await db.update(profiles).set({verification:nextVerification,updatedAt:new Date()}).where(eq(profiles.userId,userId));
+
+    if(action==="verified"){
+      await db.insert(notifications).values({
+        title:"Verification complete ✓",
+        body:"Your profile has been manually verified by the Cuddl team.",
+        audience:"all",targetUserId:userId,showPopup:true,isActive:true
+      }).catch(()=>{});
+    }else if(action==="rejected"){
+      await db.insert(notifications).values({
+        title:"Action required for verification",
+        body:requestInfo,
+        audience:"all",targetUserId:userId,showPopup:true,isActive:true
+      }).catch(()=>{});
+    }
+    return NextResponse.json({ok:true,status:action,requestInfo:requestInfo||null});
   }catch(error){
     console.error("verification decision failed",error);
     return NextResponse.json({error:"Could not update verification."},{status:500});
