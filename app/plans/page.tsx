@@ -1,129 +1,55 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type Plan={
-  name:string; tag:string; copy:string; benefits:string[];
-  prices:[string,string][]; highlight:boolean;
-};
-
-const plans:Plan[]=[
-  {
-    name:"Basic",tag:"Free",highlight:false,
-    copy:"A complete free Cuddl experience with core discovery, activities and matching.",
-    benefits:[
-      "Profile creation & mandatory profile completion",
-      "Activity, game, music & social discovery",
-      "Core search and filters",
-      "Daily Sparks and mutual Spark → Match",
-      "Matches and secure chat",
-      "Safety, report, block and privacy controls",
-      "Free identity-check flow where available",
-      "Standard discovery priority",
-      "No Boost credits, no Super Sparks and no pre-match message credits"
-    ],
-    prices:[["Monthly","₹0"]]
-  },
-  {
-    name:"Plus",tag:"From ₹99/month",highlight:false,
-    copy:"More discovery control plus entry-level visibility tools.",
-    benefits:[
-      "Everything in Basic",
-      "5 Boosts per month · 30 minutes each",
-      "Boosts reset monthly and do not carry forward on quarterly, half-year or annual plans",
-      "Advanced search & discovery filters",
-      "Profile Revisit / Rewind",
-      "Who Sparked You — limited",
-      "More activity/game access",
-      "Standard paid-plan priority over Basic",
-      "0 pre-match message credits",
-      "5 Super Sparks per month"
-    ],
-    prices:[["Monthly","₹99"],["Quarterly","₹199"],["Half-year","₹399"],["Annual","₹599"]]
-  },
-  {
-    name:"Pro",tag:"From ₹149/month",highlight:true,
-    copy:"Higher visibility and stronger interaction priority for active daters.",
-    benefits:[
-      "Everything in Plus",
-      "10 Boosts per month · 60 minutes each",
-      "Boosts reset monthly and do not carry forward on multi-month plans",
-      "Priority discovery placement above Plus for the same action",
-      "10 pre-match message credits per month",
-      "15 Super Sparks per month",
-      "Full Who Sparked You",
-      "Advanced compatibility insights",
-      "Incognito discovery",
-      "Unlimited profile revisits",
-      "Priority activity access"
-    ],
-    prices:[["Monthly","₹149"],["Quarterly","₹349"],["Half-year","₹599"],["Annual","₹999"]]
-  },
-  {
-    name:"Premium",tag:"From ₹299/month",highlight:false,
-    copy:"The highest Cuddl visibility, interaction and activity toolkit.",
-    benefits:[
-      "Everything in Pro",
-      "15 Boosts per month · 120 minutes each",
-      "Boosts reset monthly and do not carry forward on multi-month plans",
-      "Priority discovery placement above Pro, Plus and Basic for the same action",
-      "30 pre-match message credits per month",
-      "30 Super Sparks per month",
-      "Super Spark and pre-match messages appear at the top of the receiver's received queue",
-      "Priority Boost visibility",
-      "Travel Mode and premium discovery controls",
-      "Premium activity & game rooms",
-      "Premium date tools",
-      "Private albums / enhanced privacy controls",
-      "Advanced Connection features"
-    ],
-    prices:[["Monthly","₹299"],["Quarterly","₹799"],["Half-year","₹1,499"],["Annual","₹2,499"]]
-  }
-];
-
-function actionPriority(plan:string){
-  if(plan==="Premium") return "Premium → Pro → Plus → Basic";
-  if(plan==="Pro") return "Pro → Plus → Basic";
-  if(plan==="Plus") return "Plus → Basic";
-  return "Basic";
-}
+type Config={plans:Record<string,{prices:Record<string,number>,tag?:string,copy?:string}>,features:Array<{key:string,name:string,description:string,plans:string[]}>};
 
 export default function Plans(){
+  const [config,setConfig]=useState<Config|null>(null);
   const [selectedPlan,setSelectedPlan]=useState("Plus");
   const [offerCode,setOfferCode]=useState("");
   const [offer,setOffer]=useState<any>(null);
   const [offerError,setOfferError]=useState("");
   const [offerBusy,setOfferBusy]=useState(false);
+
+  useEffect(()=>{fetch("/api/plan-config").then(r=>r.json()).then(setConfig).catch(()=>setConfig(null));},[]);
+
   async function applyOffer(){
     setOfferBusy(true);setOfferError("");setOffer(null);
-    try{const r=await fetch("/api/offers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:offerCode,plan:selectedPlan})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not apply offer");setOffer(d);}
-    catch(e){setOfferError(e instanceof Error?e.message:"Could not apply offer");}finally{setOfferBusy(false);}
+    try{
+      const r=await fetch("/api/offers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:offerCode,plan:selectedPlan})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not apply offer");setOffer(d);
+    }catch(e){setOfferError(e instanceof Error?e.message:"Could not apply offer");}finally{setOfferBusy(false);}
   }
+
+  if(!config)return <main className="policy-page"><a href="/" className="policy-back">← Back to Cuddl</a><div className="eyebrow">Cuddl plans</div><h1>Plans & Premium</h1><p className="sub">Loading current plan configuration…</p></main>;
+
+  const plans=Object.entries(config.plans);
+  const periods=["Monthly","Quarterly","Half-year","Annual"];
+  const actionPriority=(plan:string)=>plan==="Premium"?"Premium → Pro → Plus → Basic":plan==="Pro"?"Pro → Plus → Basic":plan==="Plus"?"Plus → Basic":"Basic";
+
   return <main className="policy-page">
     <a href="/" className="policy-back">← Back to Cuddl</a>
     <div className="eyebrow">Cuddl plans</div><h1>Plans & Premium</h1>
-    <p className="sub">Choose a plan and billing period. Boost, message and Super Spark allowances reset each calendar subscription month; unused monthly allowances do not carry forward into later months.</p>
+    <p className="sub">Features and prices shown here are controlled by the Cuddl admin configuration. They can change as the product evolves.</p>
     <section className="panel offer-code-panel">
       <div className="eyebrow">Have an offer?</div><h2>🎟️ Apply an offer code</h2>
       <p className="sub">Select the plan you want to buy, enter your code and validate it before checkout.</p>
-      <div className="admin-grid"><select className="field" value={selectedPlan} onChange={e=>{setSelectedPlan(e.target.value);setOffer(null);setOfferError("");}}>{plans.filter(p=>p.name!=="Basic").map(p=><option key={p.name}>{p.name}</option>)}</select><input className="field" placeholder="Offer / coupon code" value={offerCode} onChange={e=>setOfferCode(e.target.value.toUpperCase())}/></div>
+      <div className="admin-grid"><select className="field" value={selectedPlan} onChange={e=>{setSelectedPlan(e.target.value);setOffer(null);setOfferError("");}}>{plans.filter(([n])=>n!=="Basic").map(([n])=><option key={n}>{n}</option>)}</select><input className="field" placeholder="Offer / coupon code" value={offerCode} onChange={e=>setOfferCode(e.target.value.toUpperCase())}/></div>
       <button className="btn" onClick={applyOffer} disabled={offerBusy||!offerCode}>{offerBusy?"Checking…":"Apply code"}</button>
       {offer&&<div className="safe">✓ Code valid · {offer.discountType==="PERCENT"?offer.discountValue+"% off":"₹"+offer.discountValue+" off"}{offer.rewardType&&offer.rewardType!=="DISCOUNT"?" · "+offer.rewardType:""}</div>}
       {offerError&&<div className="auth-error">{offerError}</div>}
     </section>
     <div className="plan-grid">
-      {plans.map(plan=><section className={"plan-card "+(plan.highlight?"plan-highlight":"")} key={plan.name}>
-        <div className="eyebrow">{plan.name}</div><h2>{plan.tag}</h2><p>{plan.copy}</p>
-        <div className="plan-prices">{plan.prices.map(([period,price])=><div key={period}><span>{period}</span><b>{price}</b></div>)}</div>
-        <ul className="plan-benefits">{plan.benefits.map(x=><li key={x}>✓ {x}</li>)}</ul>
-        <div className="safe"><b>Action priority:</b> {actionPriority(plan.name)}. If two users on the same plan perform the same eligible action, compatibility score is used as the tie-breaker.</div>
-        <button className="btn" onClick={()=>{setSelectedPlan(plan.name);alert(plan.name==="Basic"?"Basic is free.":"Checkout gateway is not connected in this test build. Apply your offer code above before checkout.");}}>{plan.name==="Basic"?"Current plan":"Choose "+plan.name}</button>
-      </section>)}
+      {plans.map(([name,plan])=>{
+        const features=config.features.filter(f=>f.plans.includes(name));
+        return <section className={"plan-card "+(name==="Pro"?"plan-highlight":"")} key={name}>
+          <div className="eyebrow">{name}</div><h2>{plan.tag||name}</h2><p>{plan.copy||""}</p>
+          <div className="plan-prices">{periods.filter(p=>plan.prices[p]!==undefined).map(p=><div key={p}><span>{p}</span><b>₹{Number(plan.prices[p]).toLocaleString("en-IN")}</b></div>)}</div>
+          <ul className="plan-benefits">{features.map(f=><li key={f.key}>✓ {f.name}</li>)}</ul>
+          <div className="safe"><b>Included features:</b> {features.length}. <b>Action priority:</b> {actionPriority(name)}.</div>
+          <button className="btn" onClick={()=>{setSelectedPlan(name);alert(name==="Basic"?"Basic is free.":"Checkout gateway is not connected in this test build.");}}>{name==="Basic"?"Current plan":"Choose "+name}</button>
+        </section>;
+      })}
     </div>
-    <section className="policy-section">
-      <h2>How Boost, Super Spark & pre-match messages work</h2>
-      <p><b>Boost:</b> temporarily increases eligible discovery exposure for its stated duration. A Boost does not guarantee a Spark, Match, reply or date. Monthly Boost allowances reset and unused Boosts do not roll over.</p>
-      <p><b>Super Spark:</b> a higher-visibility interest signal. <b>Pre-match message:</b> an eligible plan credit lets a user send a message with a Spark before a mutual Match. For both, the receiver's received queue can place the eligible action near the top according to plan priority.</p>
-      <p><b>Priority:</b> when eligible actions compete, Premium is placed ahead of Pro, Pro ahead of Plus, and Plus ahead of Basic. When competing actions come from the same plan, compatibility score is the tie-breaker. This ordering applies to the relevant Cuddl queue/placement, not as a guarantee of response or matching.</p>
-    </section>
-  </main>
+  </main>;
 }
