@@ -14,6 +14,8 @@ export default function AdminPage(){
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
   const [noteForm,setNoteForm]=useState({title:"",body:"",audience:"all",city:"Delhi",showPopup:true,publishNow:true});
+  const [newProduct,setNewProduct]=useState<any>({id:"",name:"",description:"",featureKey:"super_spark",audience:"ALL",billing:"ONE_TIME",quantity:1,price:49,validityDays:30,enabled:true});
+  const [newBundle,setNewBundle]=useState<any>({id:"",name:"",description:"",audience:"ALL",billing:"ONE_TIME",price:199,validityDays:30,items:"super_spark:10,boost:3,pre_match_message:5"});
 
   async function load(){
     const [f,n,v,o,p]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config")]);
@@ -58,9 +60,10 @@ export default function AdminPage(){
       <p className="sub">This matrix is the source of truth. Tick a plan to make a feature part of that plan. Changes affect the Plans page and server-side feature gates without editing code.</p>
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-          <thead><tr><th style={{textAlign:"left",padding:"8px"}}>Feature</th>{["Basic","Plus","Pro","Premium"].map((p:string)=><th key={p} style={{padding:"8px"}}>{p}</th>)}</tr></thead>
+          <thead><tr><th style={{textAlign:"left",padding:"8px"}}>Feature</th><th style={{padding:"8px"}}>Audience</th>{["Basic","Plus","Pro","Premium"].map((p:string)=><th key={p} style={{padding:"8px"}}>{p}</th>)}</tr></thead>
           <tbody>{planConfig.features.map((f:any,i:number)=><tr key={f.key}>
             <td style={{padding:"8px",borderTop:"1px solid rgba(0,0,0,.08)"}}><b>{f.name}</b><div className="sub">{f.description}</div></td>
+            <td style={{textAlign:"center",borderTop:"1px solid rgba(0,0,0,.08)"}}><select className="field" style={{minWidth:120}} value={(f.audience||["ALL"])[0]} onChange={e=>setPlanConfig((x:any)=>({...x,features:x.features.map((z:any,j:number)=>j===i?{...z,audience:[e.target.value]}:z)}))}><option value="ALL">All users</option><option value="FEMALE">Women only</option></select></td>
             {["Basic","Plus","Pro","Premium"].map((p:string)=><td key={p} style={{textAlign:"center",borderTop:"1px solid rgba(0,0,0,.08)"}}><input type="checkbox" checked={f.plans.includes(p)} onChange={()=>setPlanConfig((x:any)=>({...x,features:x.features.map((z:any,j:number)=>j===i?{...z,plans:z.plans.includes(p)?z.plans.filter((q:string)=>q!==p):[...z.plans,p]}:z)}))}/></td>)}
           </tr>)}</tbody>
         </table>
@@ -74,6 +77,35 @@ export default function AdminPage(){
       </div>)}
       <button className="btn" onClick={savePlanConfig}>Save plan & feature settings</button>
     </section>}
+    <section className="panel">
+      <div className="eyebrow">Launch & monetization</div><h2>Free testing mode + standalone purchases</h2>
+      <p className="sub">Launch with every feature free for every user. Later switch to MONETIZED without changing the feature catalogue.</p>
+      <div className="admin-row"><div><b>Launch access</b><div className="sub">{planConfig?.launchMode==="FREE_ALL"?"All plans, all premium features and all audiences are currently free.":"Normal plan + audience + purchased entitlement rules are active."}</div></div><select className="field" value={planConfig?.launchMode||"FREE_ALL"} onChange={e=>setPlanConfig((x:any)=>({...x,launchMode:e.target.value}))}><option value="FREE_ALL">FREE — full access testing</option><option value="MONETIZED">MONETIZED — enforce pricing</option></select></div>
+      <h3>Standalone feature products</h3>
+      {(planConfig?.standaloneProducts||[]).map((p:any,i:number)=><div className="admin-row" key={p.id}>
+        <div><b>{p.name}</b><div className="sub">{p.featureKey} · {p.quantity} units · {p.billing} · ₹{p.price} · {(p.audience||["ALL"]).join(", ")}</div></div>
+        <div className="admin-grid"><input className="field" type="number" value={p.quantity} onChange={e=>setPlanConfig((x:any)=>({...x,standaloneProducts:x.standaloneProducts.map((z:any,j:number)=>j===i?{...z,quantity:Number(e.target.value)||1}:z)}))}/><input className="field" type="number" value={p.price} onChange={e=>setPlanConfig((x:any)=>({...x,standaloneProducts:x.standaloneProducts.map((z:any,j:number)=>j===i?{...z,price:Number(e.target.value)||0}:z)}))}/><select className="field" value={p.billing} onChange={e=>setPlanConfig((x:any)=>({...x,standaloneProducts:x.standaloneProducts.map((z:any,j:number)=>j===i?{...z,billing:e.target.value}:z)}))}><option>ONE_TIME</option><option>WEEKLY</option><option>MONTHLY</option></select><select className="field" value={(p.audience||["ALL"])[0]} onChange={e=>setPlanConfig((x:any)=>({...x,standaloneProducts:x.standaloneProducts.map((z:any,j:number)=>j===i?{...z,audience:[e.target.value]}:z)}))}><option>ALL</option><option>FEMALE</option></select></div>
+      </div>)}
+      <div className="admin-grid">
+        <input className="field" placeholder="New product ID" value={newProduct.id} onChange={e=>setNewProduct({...newProduct,id:e.target.value})}/>
+        <input className="field" placeholder="Product name" value={newProduct.name} onChange={e=>setNewProduct({...newProduct,name:e.target.value})}/>
+        <input className="field" placeholder="Feature key e.g. boost" value={newProduct.featureKey} onChange={e=>setNewProduct({...newProduct,featureKey:e.target.value})}/>
+        <input className="field" type="number" placeholder="Quantity" value={newProduct.quantity} onChange={e=>setNewProduct({...newProduct,quantity:Number(e.target.value)||1})}/>
+        <input className="field" type="number" placeholder="Price ₹" value={newProduct.price} onChange={e=>setNewProduct({...newProduct,price:Number(e.target.value)||0})}/>
+        <select className="field" value={newProduct.billing} onChange={e=>setNewProduct({...newProduct,billing:e.target.value})}><option>ONE_TIME</option><option>WEEKLY</option><option>MONTHLY</option></select>
+      </div>
+      <button className="btn ghost" onClick={()=>{if(!newProduct.id||!newProduct.name||!newProduct.featureKey)return;setPlanConfig((x:any)=>({...x,standaloneProducts:[...(x.standaloneProducts||[]),newProduct]}));setNewProduct({...newProduct,id:"",name:""});}}>+ Add standalone product</button>
+      <h3 style={{marginTop:22}}>Premium feature bundles</h3>
+      {(planConfig?.bundles||[]).map((b:any,i:number)=><div className="admin-row" key={b.id}><div><b>{b.name}</b><div className="sub">₹{b.price} · {b.billing} · {b.items.map((x:any)=>x.featureKey+" ×"+x.quantity).join(" · ")}</div></div><input className="field" type="number" value={b.price} onChange={e=>setPlanConfig((x:any)=>({...x,bundles:x.bundles.map((z:any,j:number)=>j===i?{...z,price:Number(e.target.value)||0}:z)}))}/></div>)}
+      <div className="admin-grid">
+        <input className="field" placeholder="Bundle ID" value={newBundle.id} onChange={e=>setNewBundle({...newBundle,id:e.target.value})}/>
+        <input className="field" placeholder="Bundle name" value={newBundle.name} onChange={e=>setNewBundle({...newBundle,name:e.target.value})}/>
+        <input className="field" type="number" placeholder="Bundle price ₹" value={newBundle.price} onChange={e=>setNewBundle({...newBundle,price:Number(e.target.value)||0})}/>
+        <input className="field" placeholder="Items: super_spark:10, boost:3" value={newBundle.items} onChange={e=>setNewBundle({...newBundle,items:e.target.value})}/>
+      </div>
+      <button className="btn ghost" onClick={()=>{if(!newBundle.id||!newBundle.name)return;const items=newBundle.items.split(",").map((x:string)=>{const [featureKey,quantity]=x.trim().split(":");return {featureKey,quantity:Number(quantity)||1};}).filter((x:any)=>x.featureKey);setPlanConfig((x:any)=>({...x,bundles:[...(x.bundles||[]),{...newBundle,items,audience:[newBundle.audience]}]}));setNewBundle({...newBundle,id:"",name:""});}}>+ Add premium bundle</button>
+      <div style={{marginTop:14}}><button className="btn" onClick={savePlanConfig}>Save launch & monetization settings</button></div>
+    </section>
     <section className="panel"><div className="eyebrow">Growth & rewards</div><h2>Referral program</h2>
       <p className="sub">Define the qualifying event and reward. Rewards are recorded in a ledger for later entitlement/payment integration.</p>
       <form className="admin-form" onSubmit={saveReferralSettings}>
