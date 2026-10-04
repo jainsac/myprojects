@@ -55,7 +55,14 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     {id:"future-together",name:"Future Together",type:"GAME",featureKey:"compatibility",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
     {id:"dream-life",name:"Dream Life Builder",type:"GAME",featureKey:"compatibility",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
     {id:"strategy-couple",name:"Couple Strategy Game",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
-    {id:"cuddl-championship",name:"Cuddl Championship",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5}
+    {id:"cuddl-championship",name:"Cuddl Championship",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"virtual-coffee-date",name:"Virtual Coffee Date",type:"ACTIVITY",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"virtual-dinner-date",name:"Virtual Dinner Date",type:"ACTIVITY",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"virtual-movie-date",name:"Virtual Movie Date",type:"ACTIVITY",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"communication-session",name:"Communication Compatibility Session",type:"ACTIVITY",featureKey:"compatibility",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"date-planner",name:"Cuddl Date Planner",type:"ACTIVITY",featureKey:"date_tools",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"travel-planning",name:"Travel Stories & Dream Trips",type:"ACTIVITY",featureKey:"travel_mode",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:2},
+    {id:"host-room",name:"Premium Host Room",type:"ACTIVITY",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5}
   ],
   bundles:[
     {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
