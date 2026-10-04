@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/auth";
 import { getDb } from "../../../lib/db";
-import { encryptionPublicKeys, matches, messages } from "../../../lib/db/schema";
+import { encryptionPublicKeys, matches, messages, notifications } from "../../../lib/db/schema";
 
 export async function GET(request: Request) {
   const current = await getCurrentUser();
@@ -69,6 +69,16 @@ export async function POST(request: Request) {
         keyVersion: Number.isFinite(keyVersion) ? keyVersion : 1,
       },
     }).returning();
+
+    const recipientId = match[0].userAId === current.user.id ? match[0].userBId : match[0].userAId;
+    await db.insert(notifications).values({
+      title: "New message 💬",
+      body: "You have a new message from your Cuddl match.",
+      audience: "all",
+      targetUserId: recipientId,
+      showPopup: true,
+      isActive: true,
+    }).catch(error => console.error("message notification failed", error));
 
     return NextResponse.json({
       ok: true,
