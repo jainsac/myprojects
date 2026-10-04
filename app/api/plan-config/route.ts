@@ -22,6 +22,7 @@ export async function PATCH(request:Request){
     const seen=new Set<string>();
     incoming.launchMode=incoming.launchMode==="MONETIZED"?"MONETIZED":"FREE_ALL";
     incoming.standaloneProducts=Array.isArray(incoming.standaloneProducts)?incoming.standaloneProducts:[];
+    incoming.adSettings={enabled:incoming.adSettings?.enabled!==false,freePlans:Array.isArray(incoming.adSettings?.freePlans)?incoming.adSettings.freePlans.filter((p:string)=>PLAN_NAMES.includes(p as any)):["Basic"],frequency:Math.max(1,Number(incoming.adSettings?.frequency)||10),placement:"DISCOVERY_AFTER_N_PROFILES"};
     incoming.bundles=Array.isArray(incoming.bundles)?incoming.bundles:[];
     incoming.features=incoming.features.map((f:any)=>({
       key:String(f.key||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"_"),
