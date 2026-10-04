@@ -1,0 +1,1 @@
+export default function Help(){return <main><h1>Cuddl Help & Feedback</h1><p>Support centre.</p></main>}
