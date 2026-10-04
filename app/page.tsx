@@ -198,6 +198,7 @@ export default function Home() {
     setGamePrompt(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
   }
   function playTic(i:number){
+    if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of playing.");
     if(gameCells[i]) return;
     if(roomOpen?.roomId && roomOpen.role && gameTurn!==(roomOpen.role==="HOST"?"X":"O")) return notify("Wait for your turn.");
     const next=[...gameCells]; next[i]=gameTurn;
@@ -210,12 +211,14 @@ export default function Home() {
     setGameTurn(gameTurn==="X"?"O":"X");
   }
   function rollDice(){
+    if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of rolling.");
     const n=1+Math.floor(Math.random()*6); setGameDice(n);
     const player=roomOpen?.role==="GUEST"?1:0; const next=[...gameLudoPositions] as [number,number]; next[player]=Math.min(30,next[player]+n); setGameLudoPositions(next); setGameDicePos(next[player]);
     if(roomOpen?.roomId) updateGameRoom({game:"Ludo After Work",positions:next,turn:player===0?1:0,lastRoll:n,winner:next[player]>=30?player:null});
     if(next[player]>=30) notify("Finish! You won the Ludo sprint 🏁");
   }
   function flipMemory(i:number){
+    if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of playing.");
     if(memoryFlipped.includes(i)||memoryMatched.includes(i)||memoryFlipped.length>=2)return;
     const next=[...memoryFlipped,i]; setMemoryFlipped(next);
     if(next.length===2){
@@ -225,6 +228,7 @@ export default function Home() {
     }
   }
   function tapTarget(){
+    if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead.");
     setGameScore(s=>s+1); setGameTarget(Math.floor(Math.random()*20));
     if(gameScore+1>=10) notify("Snake Sprint complete! 🐍");
   }
@@ -997,6 +1001,7 @@ export default function Home() {
       </div></div>}
       {roomOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="popup-icon">{roomOpen.icon}</div><div className="eyebrow">{roomOpen.type}</div><h2>{roomOpen.name}</h2>{roomOpen.type==="Game"&&<div className="panel game-room-bar"><b>{roomOpen.roomId?"Room "+String(roomOpen.roomId).slice(0,8):"Public game lobby"}</b><p className="sub">{roomOpen.roomId?(roomOpen.role==="HOST"?(roomOpen.status==="ACTIVE"?"Opponent joined ✓":"Waiting for opponent…"):"You joined as opponent ✓"):"Create a room or join an open room."}</p>{!roomOpen.roomId&&(availableRooms.length?availableRooms.map((r:any)=><div className="room" key={r.id}><div className="grow"><b>Open room</b><div className="room-meta">Room {String(r.id).slice(0,8)}</div></div><button className="join" disabled={roomBusy} onClick={()=>joinGameRoom(r)}>Join</button></div>):<p className="safe">No open rooms yet.</p>)}</div>}<p className="sub">{roomOpen.meta || "Live beta experience"} · Join, play and give Cuddl feedback.</p>
+        {roomOpen.type==="Game" && <div className="panel spectator-bar"><b>{roomOpen.role==="SPECTATOR"?"👀 Spectator mode":"🎮 Player mode"}</b><span>{roomOpen.role==="SPECTATOR"?"Watch the live game and react — you cannot make moves.":"You are an active player."}</span><div className="chips"><button className="chip" onClick={()=>fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reaction",roomId:roomOpen.roomId,reaction:"👏 Cheer"})}).catch(()=>{})}>👏 Cheer</button><button className="chip" onClick={()=>fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reaction",roomId:roomOpen.roomId,reaction:"❤️ Love"})}).catch(()=>{})}>❤️ Love</button><button className="chip" onClick={()=>fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reaction",roomId:roomOpen.roomId,reaction:"🔥 Fire"})}).catch(()=>{})}>🔥 Fire</button><button className="chip" onClick={()=>fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reaction",roomId:roomOpen.roomId,reaction:"😂 Fun"})}).catch(()=>{})}>😂 Fun</button></div></div>}
         {roomOpen.type==="Game" ? <div>
           {roomOpen.name==="Tic-Tac-Toe" && <><div className="game-status">Turn: {gameTurn}</div><div className="tic-board">{gameCells.map((v,i)=><button className="tic-cell" key={i} onClick={()=>playTic(i)}>{v}</button>)}</div><button className="btn ghost" onClick={resetGame}>Restart</button></>}
           {roomOpen.name==="Rapid Quiz" && <><div className="game-status">Question {gameQuizIndex+1}/5 · Score {gameQuizScore}</div><div className="panel"><b>{quizQuestions[gameQuizIndex][0]}</b><div className="game-options">{quizQuestions[gameQuizIndex][1].map((x,i)=><button className="btn ghost" key={x} onClick={()=>{const score=gameQuizScore+(i===quizQuestions[gameQuizIndex][2]?1:0);setGameQuizScore(score);if(gameQuizIndex===4){notify("Quiz complete: "+score+"/5")}else setGameQuizIndex(gameQuizIndex+1)}}>{x}</button>)}</div></div></>}
