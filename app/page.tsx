@@ -49,6 +49,7 @@ export default function Home() {
   const [city] = useState("Delhi");
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [planConfig, setPlanConfig] = useState<any>(null);
   const [authMode, setAuthMode] = useState<"login"|"register">("login");
   const [authForm, setAuthForm] = useState({displayName:"",legalName:"",phone:"",email:"",password:"",city:"Delhi",governmentIdType:"AADHAAR",governmentIdLast4:"",gender:"",desiredGender:"FEMALE"});
   const [desiredGender, setDesiredGender] = useState("ANY");
@@ -126,7 +127,7 @@ export default function Home() {
   const showcaseRecorderRef = useRef<MediaRecorder | null>(null);
   const showcaseStreamRef = useRef<MediaStream | null>(null);
   const showcaseChunksRef = useRef<Blob[]>([]);
-  useEffect(() => { fetch("/api/me").then(r=>r.json()).then(d=>{if(d.authenticated)setUser(d);}).finally(()=>setAuthChecked(true)); }, []);
+  useEffect(() => { Promise.all([fetch("/api/me"),fetch("/api/plan-config")]).then(async ([m,p])=>{const md=await m.json();const pd=await p.json();if(md.authenticated)setUser(md);if(pd?.plans)setPlanConfig(pd);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user) return;
     const prefs=user?.profile?.lifestylePreferences||{};
@@ -518,6 +519,7 @@ export default function Home() {
       return true;
     });
   }, [discoverProfiles,matchFilters,user]);
+  const showDiscoveryAd=!!planConfig?.adSettings?.enabled && (planConfig?.adSettings?.freePlans||["Basic"]).includes("Basic") && index>0 && index%Math.max(1,Number(planConfig?.adSettings?.frequency)||10)===0;
   const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : {displayName:"",name:"",age:0,city:"",initial:"",tags:[],score:0,bio:"",lifestylePreferences:{}}, [index, searchableProfiles]);
   const personPhotos = useMemo(() => {
     const p:any=person||{};
@@ -611,7 +613,7 @@ export default function Home() {
     notify("Spark sent 💗");
   }
 
-  const nav = [["discover","♡","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"],["profile","☺","Profile"]] as const;
+  const nav = [["discover","♥","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"],["profile","☺","Profile"]] as const;
 
   const myShowcase=Array.isArray(user?.profile?.lifestylePreferences?.profileShowcase)
     ? user.profile.lifestylePreferences.profileShowcase : [];
@@ -648,7 +650,7 @@ export default function Home() {
             <span className="top-profile-avatar">{myProfileAvatarSrc?<img src={myProfileAvatarSrc} alt="" />:myProfileInitial}</span>
             <span>Profile</span>
           </button>
-          <button className="icon-btn" aria-label="Safety Center" onClick={() => notify("Safety Center ready")}>♡</button>
+          <button className="icon-btn heart-icon-btn" aria-label="Safety Center" onClick={() => notify("Safety Center ready")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.9c0 5.2-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.9A4.7 4.7 0 0 1 12 6.3a4.7 4.7 0 0 1 8.8 2.6Z"/></svg></button>
         </div>
       </header>
 
@@ -700,7 +702,7 @@ export default function Home() {
             <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
           </section>
 
-          {searchableProfiles.length > 0 && <section className="panel single-profile-panel">
+          {showDiscoveryAd ? <section className="panel discovery-ad-slot"><div className="ad-kicker">ADVERTISEMENT</div><div className="ad-placeholder"><span>Sponsored</span><b>Support Cuddl while you explore</b><p>Free access is supported by relevant advertising. You can continue discovering profiles after this short placement.</p><button className="btn ghost" onClick={()=>notify("Ad placement is active for free users.")}>Why am I seeing this?</button></div></section> : searchableProfiles.length > 0 && <section className="panel single-profile-panel">
             <div className="eyebrow">Profile</div>
             <div className="discover-photo">
               {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
