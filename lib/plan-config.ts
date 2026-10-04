@@ -6,14 +6,14 @@ export type PlanName = typeof PLAN_NAMES[number];
 
 export type Audience = "ALL" | "FEMALE";
 export type StandaloneProduct = { id:string; name:string; description:string; featureKey:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; quantity:number; price:number; validityDays?:number; enabled:boolean; };
-export type FeatureBundle = { id:string; name:string; description:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; price:number; validityDays?:number; enabled:boolean; items:Array<{featureKey:string,quantity:number}>; };
+export type FeatureBundle = { id:string; name:string; description:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; price:number; validityDays?:number; enabled:boolean; items:Array<{featureKey:string,quantity:number}>; };\nexport type ExperienceAccess = "PLAY"|"SPECTATE";\nexport type ExperienceConfig = { id:string; name:string; type:"GAME"|"ACTIVITY"; featureKey:string; plans:PlanName[]; spectatorPlans:PlanName[]; audience:Audience[]; dailyLimit?:number; enabled:boolean; priority?:number; };
 export type PlanConfig = {
   launchMode:"FREE_ALL"|"MONETIZED";
   plans: Record<PlanName,{prices:Record<string,number>,tag?:string,copy?:string}>;
   features: Array<{key:string,name:string,description:string,plans:PlanName[],audience:Audience[]}>;
   standaloneProducts:StandaloneProduct[];
   bundles:FeatureBundle[];
-  adSettings:{enabled:boolean;freePlans:PlanName[];frequency:number;placement:"DISCOVERY_AFTER_N_PROFILES"};
+  adSettings:{enabled:boolean;freePlans:PlanName[];frequency:number;placement:"DISCOVERY_AFTER_N_PROFILES"};\n  experiences: ExperienceConfig[];
 };
 
 export const DEFAULT_PLAN_CONFIG:PlanConfig={
@@ -30,6 +30,15 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     {id:"pre-match-5",name:"Pre-match Messages ×5",description:"5 pre-match messages.",featureKey:"pre_match_message",audience:["ALL"],billing:"ONE_TIME",quantity:5,price:99,enabled:true}
   ],
   adSettings:{enabled:true,freePlans:["Basic"],frequency:10,placement:"DISCOVERY_AFTER_N_PROFILES"},
+  experiences:[
+    {id:"ttt",name:"Tic-Tac-Toe",type:"GAME",featureKey:"paid_activity_access",plans:["Basic","Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:1},
+    {id:"rapid-quiz",name:"Rapid Quiz",type:"GAME",featureKey:"paid_activity_access",plans:["Basic","Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:1},
+    {id:"ludo",name:"Ludo After Work",type:"GAME",featureKey:"paid_activity_access",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],dailyLimit:3,enabled:true,priority:2},
+    {id:"memory",name:"Memory Match",type:"GAME",featureKey:"paid_activity_access",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],dailyLimit:3,enabled:true,priority:2},
+    {id:"chess",name:"Chess Café",type:"GAME",featureKey:"premium_rooms",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"deep-talk",name:"Deep Talk Circle",type:"ACTIVITY",featureKey:"paid_activity_access",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:2},
+    {id:"date-tools",name:"Premium Date Challenge",type:"ACTIVITY",featureKey:"date_tools",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:4}
+  ],
   bundles:[
     {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
   ],
@@ -100,3 +109,5 @@ export async function hasPlanFeature(plan:unknown,key:string,audience:unknown="A
   const p=normalizePlan(plan); const a=String(audience||"ALL").toUpperCase() as Audience;
   return config.features.some(f=>f.key===key&&f.plans.includes(p)&&(f.audience?.includes("ALL")||f.audience?.includes(a)));
 }
+
+export function getExperienceAccess(config:PlanConfig, experienceId:string, plan:PlanName):ExperienceAccess|null { const e=config.experiences.find(x=>x.id===experienceId && x.enabled); if(!e)return null; if(config.launchMode==="FREE_ALL" || e.plans.includes(plan))return "PLAY"; if(e.spectatorPlans.includes(plan))return "SPECTATE"; return null; }
