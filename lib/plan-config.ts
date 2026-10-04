@@ -6,14 +6,17 @@ export type PlanName = typeof PLAN_NAMES[number];
 
 export type Audience = "ALL" | "FEMALE";
 export type StandaloneProduct = { id:string; name:string; description:string; featureKey:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; quantity:number; price:number; validityDays?:number; enabled:boolean; };
-export type FeatureBundle = { id:string; name:string; description:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; price:number; validityDays?:number; enabled:boolean; items:Array<{featureKey:string,quantity:number}>; };\nexport type ExperienceAccess = "PLAY"|"SPECTATE";\nexport type ExperienceConfig = { id:string; name:string; type:"GAME"|"ACTIVITY"; featureKey:string; plans:PlanName[]; spectatorPlans:PlanName[]; audience:Audience[]; dailyLimit?:number; enabled:boolean; priority?:number; };
+export type FeatureBundle = { id:string; name:string; description:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; price:number; validityDays?:number; enabled:boolean; items:Array<{featureKey:string,quantity:number}>; };
+export type ExperienceAccess = "PLAY"|"SPECTATE";
+export type ExperienceConfig = { id:string; name:string; type:"GAME"|"ACTIVITY"; featureKey:string; plans:PlanName[]; spectatorPlans:PlanName[]; audience:Audience[]; dailyLimit?:number; enabled:boolean; priority?:number; };
 export type PlanConfig = {
   launchMode:"FREE_ALL"|"MONETIZED";
   plans: Record<PlanName,{prices:Record<string,number>,tag?:string,copy?:string}>;
   features: Array<{key:string,name:string,description:string,plans:PlanName[],audience:Audience[]}>;
   standaloneProducts:StandaloneProduct[];
   bundles:FeatureBundle[];
-  adSettings:{enabled:boolean;freePlans:PlanName[];frequency:number;placement:"DISCOVERY_AFTER_N_PROFILES"};\n  experiences: ExperienceConfig[];
+  adSettings:{enabled:boolean;freePlans:PlanName[];frequency:number;placement:"DISCOVERY_AFTER_N_PROFILES"};
+  experiences: ExperienceConfig[];
 };
 
 export const DEFAULT_PLAN_CONFIG:PlanConfig={
