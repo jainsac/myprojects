@@ -8,22 +8,22 @@ export default function AdminPage(){
   const [verifications,setVerifications]=useState<any[]>([]);
   const [refSettings,setRefSettings]=useState<any>({enabled:true,rewardType:"PLAN_EXTENSION",rewardValue:{months:1},qualificationEvent:"PROFILE_COMPLETE",maxRewardsPerUser:20});
   const [offers,setOffers]=useState<any[]>([]);
-  const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});
+  const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});\n  const [planConfig,setPlanConfig]=useState<any>(null);
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
   const [noteForm,setNoteForm]=useState({title:"",body:"",audience:"all",city:"Delhi",showPopup:true,publishNow:true});
 
   async function load(){
-    const [f,n,v,o]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers")]);
-    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json();
+    const [f,n,v,o,p]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config")]);
+    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json(), pd=await p.json();
     if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
-    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);
+    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);
   }
   useEffect(()=>{load()},[]);
 
   async function saveReferralSettings(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/referral",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"settings",...refSettings})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save referral settings");return;}load();}
-  async function saveOffer(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(offerForm)});const d=await r.json();if(!r.ok){setError(d.error||"Could not save offer");return;}setOfferForm({...offerForm,code:""});load();}
+  async function savePlanConfig(){const r=await fetch("/api/plan-config",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({config:planConfig})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save plan configuration");return;}setPlanConfig(d.config);setError("");}\n  async function saveOffer(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(offerForm)});const d=await r.json();if(!r.ok){setError(d.error||"Could not save offer");return;}setOfferForm({...offerForm,code:""});load();}
   async function createFestival(e:React.FormEvent){
     e.preventDefault();setError("");
     const ids=activities.map(a=>a.id);
@@ -51,6 +51,27 @@ export default function AdminPage(){
   return <main className="admin-page">
     <div className="admin-head"><div><div className="eyebrow">Cuddl control room</div><h1>Admin Console</h1><p className="sub">Turn special experiences on for a limited occasion, then switch them off completely.</p></div><a className="btn ghost" href="/">Open app</a></div>
     {error&&<div className="auth-error">{error}</div>}
+    {planConfig&&<section className="panel">
+      <div className="eyebrow">Monetisation control</div><h2>Plans, pricing & feature assignment</h2>
+      <p className="sub">This matrix is the source of truth. Tick a plan to make a feature part of that plan. Changes affect the Plans page and server-side feature gates without editing code.</p>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+          <thead><tr><th style={{textAlign:"left",padding:"8px"}}>Feature</th>{["Basic","Plus","Pro","Premium"].map((p:string)=><th key={p} style={{padding:"8px"}}>{p}</th>)}</tr></thead>
+          <tbody>{planConfig.features.map((f:any,i:number)=><tr key={f.key}>
+            <td style={{padding:"8px",borderTop:"1px solid rgba(0,0,0,.08)"}}><b>{f.name}</b><div className="sub">{f.description}</div></td>
+            {["Basic","Plus","Pro","Premium"].map((p:string)=><td key={p} style={{textAlign:"center",borderTop:"1px solid rgba(0,0,0,.08)"}}><input type="checkbox" checked={f.plans.includes(p)} onChange={()=>setPlanConfig((x:any)=>({...x,features:x.features.map((z:any,j:number)=>j===i?{...z,plans:z.plans.includes(p)?z.plans.filter((q:string)=>q!==p):[...z.plans,p]}:z)}))}/></td>)}
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <h3 style={{marginTop:22}}>Pricing</h3>
+      {["Basic","Plus","Pro","Premium"].map((p:string)=><div className="admin-row" key={p}>
+        <div><b>{p}</b><div className="sub">Edit any billing period. Set ₹0 for a free period.</div></div>
+        <div className="admin-grid" style={{flex:1}}>
+          {["Monthly","Quarterly","Half-year","Annual"].map((period:string)=><input key={period} className="field" placeholder={period} value={planConfig.plans[p].prices[period]??""} onChange={e=>setPlanConfig((x:any)=>({...x,plans:{...x.plans,[p]:{...x.plans[p],prices:{...x.plans[p].prices,[period]:Number(e.target.value)||0}}}}))}/>)}
+        </div>
+      </div>)}
+      <button className="btn" onClick={savePlanConfig}>Save plan & feature settings</button>
+    </section>}
     <section className="panel"><div className="eyebrow">Growth & rewards</div><h2>Referral program</h2>
       <p className="sub">Define the qualifying event and reward. Rewards are recorded in a ledger for later entitlement/payment integration.</p>
       <form className="admin-form" onSubmit={saveReferralSettings}>
