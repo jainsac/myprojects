@@ -20,12 +20,17 @@ export async function PATCH(request:Request){
       }
     }
     const seen=new Set<string>();
+    incoming.launchMode=incoming.launchMode==="MONETIZED"?"MONETIZED":"FREE_ALL";
+    incoming.standaloneProducts=Array.isArray(incoming.standaloneProducts)?incoming.standaloneProducts:[];
+    incoming.bundles=Array.isArray(incoming.bundles)?incoming.bundles:[];
     incoming.features=incoming.features.map((f:any)=>({
       key:String(f.key||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"_"),
       name:String(f.name||"").trim().slice(0,120),
       description:String(f.description||"").trim().slice(0,300),
       plans:Array.isArray(f.plans)?f.plans.filter((p:string)=>PLAN_NAMES.includes(p as any)):[]
     })).filter((f:any)=>f.key&&f.name&&!seen.has(f.key)&&seen.add(f.key));
+    incoming.standaloneProducts=incoming.standaloneProducts.map((p:any)=>({id:String(p.id||"").trim(),name:String(p.name||"").trim().slice(0,120),description:String(p.description||"").trim().slice(0,300),featureKey:String(p.featureKey||"").trim(),audience:Array.isArray(p.audience)?p.audience.filter((a:string)=>a==="ALL"||a==="FEMALE"):["ALL"],billing:["ONE_TIME","MONTHLY","WEEKLY"].includes(p.billing)?p.billing:"ONE_TIME",quantity:Math.max(1,Number(p.quantity)||1),price:Math.max(0,Number(p.price)||0),validityDays:p.validityDays?Math.max(1,Number(p.validityDays)||1):undefined,enabled:p.enabled!==false})).filter((p:any)=>p.id&&p.name&&p.featureKey);
+    incoming.bundles=incoming.bundles.map((b:any)=>({id:String(b.id||"").trim(),name:String(b.name||"").trim().slice(0,120),description:String(b.description||"").trim().slice(0,300),audience:Array.isArray(b.audience)?b.audience.filter((a:string)=>a==="ALL"||a==="FEMALE"):["ALL"],billing:["ONE_TIME","MONTHLY","WEEKLY"].includes(b.billing)?b.billing:"ONE_TIME",price:Math.max(0,Number(b.price)||0),validityDays:b.validityDays?Math.max(1,Number(b.validityDays)||1):undefined,enabled:b.enabled!==false,items:Array.isArray(b.items)?b.items.map((i:any)=>({featureKey:String(i.featureKey||"").trim(),quantity:Math.max(1,Number(i.quantity)||1)})).filter((i:any)=>i.featureKey):[]})).filter((b:any)=>b.id&&b.name&&b.items.length);
     await ensurePlanConfigSchema();
     const db=getDb();
     await db.execute(sql`UPDATE plan_config SET config=${JSON.stringify(incoming)}::jsonb,updated_at=now() WHERE id=1`);
