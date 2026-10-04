@@ -29,6 +29,13 @@ const activities = [
   ["💚", "Green Flag Lab", "Compatibility · Dating", "11/16"],
   ["✈️", "Travel Stories & Dream Trips", "Travel · Adventure", "18/25"],
   ["🎨", "Sketch Together", "Art · Creativity", "6/10"],
+  ["☕", "Virtual Coffee Date", "Pro · Virtual date", "Open"],
+  ["🍽️", "Virtual Dinner Date", "Pro · Virtual date", "Open"],
+  ["🎬", "Virtual Movie Date", "Pro · Virtual date", "Open"],
+  ["💬", "Communication Compatibility Session", "Pro · Compatibility", "Open"],
+  ["🗓️", "Cuddl Date Planner", "Premium · Date planning", "Open"],
+  ["✈️", "Travel Stories & Dream Trips", "Plus+ · Travel", "18/25"],
+  ["🎙️", "Premium Host Room", "Premium · Host & spectate", "Open"],
 ];
 
 const games = [
@@ -46,6 +53,25 @@ const games = [
   ["⚡", "5 Second Challenge", "Answer before time"],
   ["🎵", "Guess the Song", "Music challenge"],
   ["🎬", "Guess the Movie", "Emoji movie quiz"],
+  ["🧠", "Couple Trivia Battle", "Pro duel · compatibility"],
+  ["💚", "Compatibility Clash", "Pro compatibility duel"],
+  ["⚡", "Beat the Clock", "Pro timed challenge"],
+  ["🔤", "Word Chain Battle", "Pro word duel"],
+  ["🧩", "Picture Puzzle Duel", "Pro visual duel"],
+  ["🎯", "Guess My Answer", "Pro prediction game"],
+  ["📖", "Story Builder", "Pro co-created story"],
+  ["🎵", "Song Battle", "Pro music duel"],
+  ["🎬", "Movie Emoji Battle", "Pro movie duel"],
+  ["🧠", "Memory About Me", "Pro remember-your-match"],
+  ["⚡", "Fast Questions Duel", "Pro rapid connection"],
+  ["🗺️", "Cuddl Quest", "Premium adventure"],
+  ["🔐", "Two-Person Escape Room", "Premium puzzle room"],
+  ["🕵️", "Mystery Match", "Premium mystery experience"],
+  ["💞", "Love Language Challenge", "Premium compatibility"],
+  ["🔮", "Future Together", "Premium future planning"],
+  ["🏡", "Dream Life Builder", "Premium shared vision"],
+  ["♟️", "Couple Strategy Game", "Premium strategy"],
+  ["🏆", "Cuddl Championship", "Premium tournament"],
 ];
 
 const music = [
