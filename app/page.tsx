@@ -180,6 +180,13 @@ export default function Home() {
   const [gameTarget, setGameTarget] = useState(0);
   const [gameScore, setGameScore] = useState(0);
   const [gamePrompt, setGamePrompt] = useState("");
+  const [experienceRound, setExperienceRound] = useState(1);
+  const [experienceScore, setExperienceScore] = useState(0);
+  const [experienceChoice, setExperienceChoice] = useState("");
+  const premiumGameNames = new Set(["Couple Trivia Battle","Compatibility Clash","Beat the Clock","Word Chain Battle","Picture Puzzle Duel","Guess My Answer","Story Builder","Song Battle","Movie Emoji Battle","Memory About Me","Fast Questions Duel","Cuddl Quest","Two-Person Escape Room","Mystery Match","Love Language Challenge","Future Together","Dream Life Builder","Couple Strategy Game","Cuddl Championship"]);
+  const premiumPrompts = ["Choose your answer and compare with your partner.","Ask your partner the same question and reveal together.","Pick one: adventure, comfort, humour or ambition.","Describe your ideal shared weekend in one sentence.","Name one thing that would make a date unforgettable.","Choose the next move together."];
+  function startPremiumRound(){setExperienceRound(r=>r+1);setExperienceChoice("");setGamePrompt(premiumPrompts[(experienceRound-1)%premiumPrompts.length]);}
+  function answerPremiumRound(){if(roomOpen?.role==="SPECTATOR")return;setExperienceChoice("answered");setExperienceScore(s=>s+1);notify("Point recorded ✦");}
   const [gameLudoPositions, setGameLudoPositions] = useState<[number,number]>([0,0]);
   const [memoryCards, setMemoryCards] = useState<string[]>([]);
   const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
@@ -221,7 +228,7 @@ export default function Home() {
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
     setGameDicePos(0); setGameDice(0); setGameLudoPositions([0,0]); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
-    setGamePrompt(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
+    setGamePrompt(""); setExperienceRound(1); setExperienceScore(0); setExperienceChoice(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
   }
   function playTic(i:number){
     if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of playing.");
@@ -1036,6 +1043,7 @@ export default function Home() {
           {(["Rapid Fire + Truth & Dare","Would You Rather","Two Truths & a Lie","Emoji Guess","Green Flag / Red Flag","Would You Rather","Two Truths & a Lie","5 Second Challenge","Guess the Song","Guess the Movie"].includes(roomOpen.name)) && <><div className="prompt-card"><small>YOUR TURN</small><b>{gamePrompt||"Tap for a prompt"}</b><span>Answer honestly, then invite your room partner to answer the same.</span></div><button className="btn" onClick={nextPrompt}>New prompt</button></>}
           {roomOpen.name==="Memory Match" && <><div className="game-status">Matched {memoryMatched.length/2}/{memoryCards.length/2} pairs</div><div className="memory-grid">{memoryCards.map((v,i)=><button key={i} className="memory-card" onClick={()=>flipMemory(i)}>{memoryMatched.includes(i)||memoryFlipped.includes(i)?v:"?"}</button>)}</div></>}
           {roomOpen.name==="Chess Café" && <><div className="chess-board">{Array.from({length:64},(_,i)=><span key={i} className={((Math.floor(i/8)+i)%2===0)?"light":"dark"}>{i===0?"♜":i===1?"♞":i===2?"♝":i===3?"♛":i===4?"♚":i===5?"♝":i===6?"♞":i===7?"♜":i>47&&i<56?"♙":""}</span>)}</div><button className="btn" onClick={()=>notify("Chess challenge joined ♟️")}>Join challenge</button></>}
+          {premiumGameNames.has(roomOpen.name) && <div className="panel"><div className="game-status">Round {experienceRound} · Points {experienceScore}</div><div className="prompt-card"><small>LIVE CHALLENGE</small><b>{gamePrompt||"Ready when you are."}</b><span>Both players answer and compare. Spectators can watch and react.</span></div><div className="actions"><button className="btn" disabled={roomOpen.role==="SPECTATOR"} onClick={startPremiumRound}>{gamePrompt?"Next challenge":"Start challenge"}</button><button className="btn ghost" disabled={roomOpen.role==="SPECTATOR"} onClick={answerPremiumRound}>{experienceChoice?"Point earned ✓":"I answered"}</button></div></div>}
         </div> : <div><div className="verification-list"><div>🎥 Camera optional</div><div>🎙️ Microphone optional</div><div>💗 Spark stays optional</div></div><div className="prompt-card"><small>ACTIVITY CHALLENGE</small><b>{roomOpen.name}</b><span>Complete one small shared challenge and start a conversation.</span></div><button className="btn" disabled={activityDone} onClick={()=>{setActivityDone(true);notify("Activity challenge completed ✦")}}>{activityDone?"Completed ✓":"Start challenge"}</button></div>}
         <button className="btn ghost" onClick={roomOpen.type==="Game"?closeGameRoom:()=>setRoomOpen(null)}>Close</button>
       </div></div>}
