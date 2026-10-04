@@ -273,3 +273,26 @@
 .memory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.memory-card{aspect-ratio:1;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.06);font-size:24px;cursor:pointer}.memory-card:hover{transform:translateY(-1px)}.game-room-bar{margin:12px 0;padding:12px}.game-room-bar .room{margin-top:8px}
 
 .spectator-bar{display:flex;flex-direction:column;gap:7px;margin:10px 0;padding:12px}.spectator-bar>span{font-size:12px;opacity:.75}.spectator-bar .chips{margin-top:2px}
+
+
+/* Profile UX refinements: collapsed discovery filters, visitor preview, aligned privacy actions */
+.search-panel{overflow:hidden}
+.search-panel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0;font-weight:800}
+.search-panel>summary::-webkit-details-marker{display:none}
+.search-panel>summary:after{content:"⌄";font-size:18px;color:var(--r);transition:transform .2s ease}
+.search-panel[open]>summary:after{transform:rotate(180deg)}
+.search-panel[open]>summary{padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.privacy-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
+.privacy-actions .btn{width:100%;min-width:0;min-height:44px;margin:0;display:flex;align-items:center;justify-content:center;text-align:center}
+.profile-preview-panel{background:linear-gradient(145deg,#fff9fa,#fff);}
+.profile-preview-panel h3{margin:4px 0 5px;font-size:20px}
+.profile-preview-panel .prompt-card{background:#fff}
+.profile-preview-panel .prompt-package-media{grid-template-columns:repeat(2,minmax(0,1fr));}
+.profile-preview-panel .prompt-package-item{min-height:70px}
+.profile-preview-panel .prompt-package-item img,.profile-preview-panel .prompt-package-item video{max-height:220px}
+.profile-preview-panel .showcase-preview-list{margin-top:12px}
+@media(max-width:600px){
+  .privacy-actions{grid-template-columns:1fr 1fr}
+  .privacy-actions .btn{min-height:46px;font-size:11px;padding:9px 7px}
+  .profile-preview-panel .prompt-package-media{grid-template-columns:1fr}
+}
