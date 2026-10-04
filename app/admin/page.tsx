@@ -10,6 +10,7 @@ export default function AdminPage(){
   const [offers,setOffers]=useState<any[]>([]);
   const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});
   const [planConfig,setPlanConfig]=useState<any>(null);
+  const [analytics,setAnalytics]=useState<any>(null);
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
@@ -18,10 +19,10 @@ export default function AdminPage(){
   const [newBundle,setNewBundle]=useState<any>({id:"",name:"",description:"",audience:"ALL",billing:"ONE_TIME",price:199,validityDays:30,items:"super_spark:10,boost:3,pre_match_message:5"});
 
   async function load(){
-    const [f,n,v,o,p]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config")]);
-    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json(), pd=await p.json();
+    const [f,n,v,o,p,a]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config"),fetch("/api/analytics")]);
+    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json(), pd=await p.json(), ad=await a.json();
     if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
-    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);
+    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);if(a.ok)setAnalytics(ad);
   }
   useEffect(()=>{load()},[]);
 
@@ -106,6 +107,7 @@ export default function AdminPage(){
       <button className="btn ghost" onClick={()=>{if(!newBundle.id||!newBundle.name)return;const items=newBundle.items.split(",").map((x:string)=>{const [featureKey,quantity]=x.trim().split(":");return {featureKey,quantity:Number(quantity)||1};}).filter((x:any)=>x.featureKey);setPlanConfig((x:any)=>({...x,bundles:[...(x.bundles||[]),{...newBundle,items,audience:[newBundle.audience]}]}));setNewBundle({...newBundle,id:"",name:""});}}>+ Add premium bundle</button>
       <div style={{marginTop:14}}><button className="btn" onClick={savePlanConfig}>Save launch & monetization settings</button></div>
     </section>
+    <section className="panel"><div className="eyebrow">Product analytics</div><h2>Feature usage — last 30 days</h2><p className="sub">These events are the evidence base for deciding what should remain free, become premium, or become an add-on.</p><div className="admin-grid"><div className="safe"><b>{analytics?.totals?.events||0}</b><br/>usage events</div><div className="safe"><b>{analytics?.totals?.users||0}</b><br/>active tracked users</div></div><div style={{overflowX:"auto",marginTop:12}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr><th style={{textAlign:"left",padding:8}}>Feature</th><th style={{textAlign:"left",padding:8}}>Event</th><th style={{textAlign:"right",padding:8}}>Count</th></tr></thead><tbody>{(analytics?.byFeature||[]).map((x:any)=><tr key={x.feature_key+"-"+x.event_name}><td style={{padding:8}}>{x.feature_key}</td><td style={{padding:8}}>{x.event_name}</td><td style={{padding:8,textAlign:"right"}}>{x.count}</td></tr>)}</tbody></table></div></section>
     <section className="panel"><div className="eyebrow">Growth & rewards</div><h2>Referral program</h2>
       <p className="sub">Define the qualifying event and reward. Rewards are recorded in a ledger for later entitlement/payment integration.</p>
       <form className="admin-form" onSubmit={saveReferralSettings}>
