@@ -22,7 +22,7 @@ export async function GET(){
     governmentIdType:identityVerifications.governmentIdType,governmentIdLast4:identityVerifications.governmentIdLast4,
     selfieFrontUrl:identityVerifications.selfieFrontUrl,selfieLeftUrl:identityVerifications.selfieLeftUrl,selfieRightUrl:identityVerifications.selfieRightUrl,
     provider:identityVerifications.provider,createdAt:identityVerifications.createdAt,updatedAt:identityVerifications.updatedAt,
-    email:users.email,phone:users.phone,displayName:profiles.displayName,city:profiles.city
+    email:users.email,phone:users.phone,displayName:profiles.displayName,city:profiles.city,verification:profiles.verification
   }).from(identityVerifications).leftJoin(users,eq(users.id,identityVerifications.userId)).leftJoin(profiles,eq(profiles.userId,identityVerifications.userId))
     .orderBy(desc(identityVerifications.updatedAt));
   return NextResponse.json({verifications:rows});
