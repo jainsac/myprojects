@@ -475,6 +475,16 @@ export default function Home() {
     if(!user?.user?.id && !user?.id)return;
     const max=kind==="photo"?5*1024*1024:50*1024*1024;
     if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"50MB"}`);return;}
+    if(kind==="photo" && "FaceDetector" in window){
+      try{
+        const detector=new (window as any).FaceDetector({fastMode:true,maxDetectedFaces:4});
+        const bitmap=await createImageBitmap(file);
+        const faces=await detector.detect(bitmap);
+        bitmap.close();
+        if(faces.length>1){notify("Group photo detected. Only photos showing you alone are allowed.");return;}
+        if(faces.length===0){notify("No clear face detected. Please upload a clear personal photo.");return;}
+      }catch{}
+    }
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||({photo:"jpg",voice:"webm",video:"webm"} as any)[kind]).toLowerCase();
@@ -541,6 +551,9 @@ export default function Home() {
 
   async function saveProfile(){
     if(profileSaving)return;
+    const showcase=Array.isArray(profileDraft.profileShowcase)?profileDraft.profileShowcase:[];
+    const hasSelfPhoto=showcase.some((x:any)=>x?.kind==="photo" && x?.pathname);
+    if(!hasSelfPhoto){notify("At least 1 personal photo is required to complete your profile.");return;}
     setProfileSaving(true);
     try{
       const r=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(profileDraft)});
@@ -740,7 +753,11 @@ export default function Home() {
       localStorage.setItem("cuddl_free_verification",JSON.stringify({status:"pending",submittedAt:new Date().toISOString(),captures:Object.fromEntries(keys.map(k=>[k,{hash:captures[k].hash,size:captures[k].size,type:captures[k].type}]))}));
       setFreeVerificationStatus("pending");
       setFreeVerificationFiles({front:null,left:null,right:null});
-      notify("Verification captures securely uploaded and submitted");
+      stopFreeCamera();
+      setVerificationOpen(false);
+      setOnboardingPromptOpen(false);
+      setProfileModal(null);
+      notify("Verification submitted successfully ✓ You can now complete your profile.");
     }catch(err){notify(err instanceof Error ? err.message : "Could not prepare verification");}
     finally{setVerificationSubmitting(false);}
   }
@@ -791,6 +808,14 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">Cuddl</div>
         <div className="topbar-actions">
+          <button className="top-action-link" aria-label="Open messages" onClick={()=>{setTab("matches");setChatMatch(null);}}>
+            <span className="top-action-icon">💬</span><span>Messages</span>
+            {notifications.some((n:any)=>!n.read && String(n.title||"").toLowerCase().includes("message"))&&<b className="notification-badge">!</b>}
+          </button>
+          <button className="top-action-link" aria-label="Open notifications" onClick={()=>setNotificationOpen(true)}>
+            <span className="top-action-icon">🔔</span><span>Alerts</span>
+            {notifications.some((n:any)=>!n.read)&&<b className="notification-badge">{notifications.filter((n:any)=>!n.read).length>9?"9+":notifications.filter((n:any)=>!n.read).length}</b>}
+          </button>
           <button className="top-profile-link" aria-label="Open profile" onClick={()=>setTab("profile")}>
             <span className="top-profile-avatar">{myProfileAvatarSrc?<img loading="eager" decoding="async" src={myProfileAvatarSrc} alt="" />:myProfileInitial}</span>
             <span>Profile</span>
@@ -930,6 +955,7 @@ export default function Home() {
 
         {tab === "matches" && <>
           <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
+          <div className="panel messages-shortcut"><div><b>💬 Messages</b><p className="sub">Your chats live here. New message alerts also appear at the top.</p></div><button className="btn" onClick={()=>document.querySelector(".chat-panel")?.scrollIntoView({behavior:"smooth",block:"start"})}>Open chat</button></div>
           {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked.map(p=>({...p,matchId:undefined}))).map((p:any) => <div className="panel" key={p.matchId||p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}{p.age ? ", "+p.age : ""} ✓</b><div className="sub">{p.city || "Cuddl"}{p.score ? " · "+p.score+"% compatibility" : " · mutual connection"}</div></div></div><div className="actions"><button className="btn" onClick={() => openChat(p)} disabled={!p.matchId}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
           {chatMatch && <div className="panel chat-panel">
             <div className="profile-row"><button className="icon-btn" onClick={()=>setChatMatch(null)} aria-label="Close chat">‹</button><div className="avatar">{chatMatch.initial}</div><div className="grow"><b>{chatMatch.name}</b><div className="sub">Matched on Cuddl · 🔒 end-to-end encrypted</div></div></div>
