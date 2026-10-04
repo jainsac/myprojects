@@ -335,7 +335,7 @@ export default function Home() {
     await refreshFestival();
     setFestivalOpen(true);
   }
-  useEffect(() => { if(!user)return; const t=window.setInterval(()=>{refreshFestival()},30000); return ()=>window.clearInterval(t); }, [user]);
+  useEffect(() => { if(!user)return; const t=window.setInterval(()=>{refreshFestival()},10000); return ()=>window.clearInterval(t); }, [user]);
   useEffect(() => { if(!user)return; const t=window.setInterval(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});const d=await r.json();if(Array.isArray(d.notifications))setNotifications(d.notifications)},30000); return ()=>window.clearInterval(t); }, [user]);
   useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   const passwordChecks = useMemo(() => ({length: authForm.password.length >= 8, upper: /[A-Z]/.test(authForm.password), lower: /[a-z]/.test(authForm.password), number: /[0-9]/.test(authForm.password), special: /[^A-Za-z0-9]/.test(authForm.password)}), [authForm.password]);
@@ -393,6 +393,16 @@ export default function Home() {
     if(!user?.user?.id && !user?.id)return;
     const max=kind==="photo"?5*1024*1024:50*1024*1024;
     if(file.size>max){notify(`Please keep the ${kind} under ${kind==="photo"?"5MB":"50MB"}`);return;}
+    if(kind==="photo" && "FaceDetector" in window){
+      try{
+        const detector=new (window as any).FaceDetector({fastMode:true,maxDetectedFaces:4});
+        const bitmap=await createImageBitmap(file);
+        const faces=await detector.detect(bitmap);
+        bitmap.close();
+        if(faces.length>1){notify("Group photo detected. Prompt photos must show you alone.");return;}
+        if(faces.length===0){notify("No clear face detected. Please use a clear personal photo.");return;}
+      }catch{}
+    }
     setShowcaseBusy(true);
     try{
       const ext=(file.name.split(".").pop()||"webm").toLowerCase();
