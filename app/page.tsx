@@ -154,6 +154,10 @@ export default function Home() {
   const [gameTarget, setGameTarget] = useState(0);
   const [gameScore, setGameScore] = useState(0);
   const [gamePrompt, setGamePrompt] = useState("");
+  const [gameLudoPositions, setGameLudoPositions] = useState<[number,number]>([0,0]);
+  const [memoryCards, setMemoryCards] = useState<string[]>([]);
+  const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
+  const [memoryMatched, setMemoryMatched] = useState<number[]>([]);
   const quizQuestions = [
     ["Which planet is known as the Red Planet?",["Earth","Mars","Venus","Jupiter"],1],
     ["Which is the largest ocean?",["Atlantic","Indian","Pacific","Arctic"],2],
@@ -175,12 +179,14 @@ export default function Home() {
   async function joinGameRoom(room:any){setRoomBusy(true);try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:room.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not join room.");resetGame();setRoomOpen({type:"Game",icon:roomOpen?.icon||"🎮",name:room.game_key,meta:"Multiplayer game",roomId:d.room.id,role:d.room.role,status:d.room.status,state:d.room.state||{}});notify("Joined game room 🎮");}catch(e){notify(e instanceof Error?e.message:"Could not join room.");}finally{setRoomBusy(false)}}
   async function updateGameRoom(state:any){if(!roomOpen?.roomId)return;await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",roomId:roomOpen.roomId,state})}).catch(()=>{})}
   async function closeGameRoom(){if(roomOpen?.roomId)await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"leave",roomId:roomOpen.roomId})}).catch(()=>{});setRoomOpen(null);setAvailableRooms([])}
-  useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{}}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
+  useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{}}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}
+        if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p:[number,number]=[Number(s.positions[0]||0),Number(s.positions[1]||0)];setGameLudoPositions(p);setGameDicePos(p[roomOpen.role==="GUEST"?1:0]||0);setGameDice(Number(s.lastRoll||0))}
+        if(s.game==="Memory Match"&&Array.isArray(s.matched)){setMemoryMatched(s.matched);if(Array.isArray(s.cards)&&s.cards.length)setMemoryCards(s.cards)}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
   useEffect(()=>{if(roomOpen?.type==="Game"&&!roomOpen?.roomId)loadGameRooms(roomOpen.name)},[roomOpen?.type,roomOpen?.name,roomOpen?.roomId]);
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
-    setGameDicePos(0); setGameDice(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
-    setGamePrompt("");
+    setGameDicePos(0); setGameDice(0); setGameLudoPositions([0,0]); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
+    setGamePrompt(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
   }
   function playTic(i:number){
     if(gameCells[i]) return;
@@ -195,8 +201,19 @@ export default function Home() {
     setGameTurn(gameTurn==="X"?"O":"X");
   }
   function rollDice(){
-    const n=1+Math.floor(Math.random()*6); setGameDice(n); setGameDicePos(p=>Math.min(30,p+n));
-    if(gameDicePos+n>=30) notify("Finish! You won the Ludo sprint 🏁");
+    const n=1+Math.floor(Math.random()*6); setGameDice(n);
+    const player=roomOpen?.role==="GUEST"?1:0; const next=[...gameLudoPositions] as [number,number]; next[player]=Math.min(30,next[player]+n); setGameLudoPositions(next); setGameDicePos(next[player]);
+    if(roomOpen?.roomId) updateGameRoom({game:"Ludo After Work",positions:next,turn:player===0?1:0,lastRoll:n,winner:next[player]>=30?player:null});
+    if(next[player]>=30) notify("Finish! You won the Ludo sprint 🏁");
+  }
+  function flipMemory(i:number){
+    if(memoryFlipped.includes(i)||memoryMatched.includes(i)||memoryFlipped.length>=2)return;
+    const next=[...memoryFlipped,i]; setMemoryFlipped(next);
+    if(next.length===2){
+      const match=memoryCards[next[0]]===memoryCards[next[1]];
+      if(match){const m=[...memoryMatched,...next];setMemoryMatched(m);setMemoryFlipped([]);if(roomOpen?.roomId)updateGameRoom({game:"Memory Match",cards:memoryCards,matched:m,flipped:[]});if(m.length===memoryCards.length)notify("Memory Match complete! 🧠🎉");}
+      else window.setTimeout(()=>setMemoryFlipped([]),700);
+    }
   }
   function tapTarget(){
     setGameScore(s=>s+1); setGameTarget(Math.floor(Math.random()*20));
@@ -974,10 +991,10 @@ export default function Home() {
         {roomOpen.type==="Game" ? <div>
           {roomOpen.name==="Tic-Tac-Toe" && <><div className="game-status">Turn: {gameTurn}</div><div className="tic-board">{gameCells.map((v,i)=><button className="tic-cell" key={i} onClick={()=>playTic(i)}>{v}</button>)}</div><button className="btn ghost" onClick={resetGame}>Restart</button></>}
           {roomOpen.name==="Rapid Quiz" && <><div className="game-status">Question {gameQuizIndex+1}/5 · Score {gameQuizScore}</div><div className="panel"><b>{quizQuestions[gameQuizIndex][0]}</b><div className="game-options">{quizQuestions[gameQuizIndex][1].map((x,i)=><button className="btn ghost" key={x} onClick={()=>{const score=gameQuizScore+(i===quizQuestions[gameQuizIndex][2]?1:0);setGameQuizScore(score);if(gameQuizIndex===4){notify("Quiz complete: "+score+"/5")}else setGameQuizIndex(gameQuizIndex+1)}}>{x}</button>)}</div></div></>}
-          {roomOpen.name==="Ludo After Work" && <><div className="game-status">Progress {gameDicePos}/30 · last roll {gameDice}</div><div className="ludo-track">{Array.from({length:31},(_,i)=><span className={i<=gameDicePos?"ludo-dot active":"ludo-dot"} key={i}>{i===30?"🏁":""}</span>)}</div><button className="btn" onClick={rollDice}>Roll dice 🎲</button></>}
+          {roomOpen.name==="Ludo After Work" && <><div className="game-status">You: {gameLudoPositions[roomOpen.role==="GUEST"?1:0]}/30 · Opponent: {gameLudoPositions[roomOpen.role==="GUEST"?0:1]}/30 · last roll {gameDice}</div><div className="ludo-track">{Array.from({length:31},(_,i)=><span className={i<=gameDicePos?"ludo-dot active":"ludo-dot"} key={i}>{i===30?"🏁":""}</span>)}</div><button className="btn" onClick={rollDice}>Roll dice 🎲</button></>}
           {roomOpen.name==="Snake Sprint" && <><div className="game-status">Score {gameScore}/10</div><div className="snake-grid">{Array.from({length:20},(_,i)=><button className={i===gameTarget?"snake-target":"snake-cell"} key={i} onClick={tapTarget}>{i===gameTarget?"🐍":"·"}</button>)}</div></>}
           {(["Rapid Fire + Truth & Dare","Would You Rather","Two Truths & a Lie","Emoji Guess","Green Flag / Red Flag","Would You Rather","Two Truths & a Lie","5 Second Challenge","Guess the Song","Guess the Movie"].includes(roomOpen.name)) && <><div className="prompt-card"><small>YOUR TURN</small><b>{gamePrompt||"Tap for a prompt"}</b><span>Answer honestly, then invite your room partner to answer the same.</span></div><button className="btn" onClick={nextPrompt}>New prompt</button></>}
-          {roomOpen.name==="Memory Match" && <><div className="prompt-card"><small>MEMORY CHALLENGE</small><b>Match pairs with a real room partner.</b><span>This beta build tracks participation; real-time multiplayer pairing is the next room layer.</span></div><button className="btn" onClick={()=>notify("Memory Match room joined 🧩")}>Join round</button></>}
+          {roomOpen.name==="Memory Match" && <><div className="game-status">Matched {memoryMatched.length/2}/{memoryCards.length/2} pairs</div><div className="memory-grid">{memoryCards.map((v,i)=><button key={i} className="memory-card" onClick={()=>flipMemory(i)}>{memoryMatched.includes(i)||memoryFlipped.includes(i)?v:"?"}</button>)}</div></>}
           {roomOpen.name==="Chess Café" && <><div className="chess-board">{Array.from({length:64},(_,i)=><span key={i} className={((Math.floor(i/8)+i)%2===0)?"light":"dark"}>{i===0?"♜":i===1?"♞":i===2?"♝":i===3?"♛":i===4?"♚":i===5?"♝":i===6?"♞":i===7?"♜":i>47&&i<56?"♙":""}</span>)}</div><button className="btn" onClick={()=>notify("Chess challenge joined ♟️")}>Join challenge</button></>}
         </div> : <div><div className="verification-list"><div>🎥 Camera optional</div><div>🎙️ Microphone optional</div><div>💗 Spark stays optional</div></div><div className="prompt-card"><small>ACTIVITY CHALLENGE</small><b>{roomOpen.name}</b><span>Complete one small shared challenge and start a conversation.</span></div><button className="btn" disabled={activityDone} onClick={()=>{setActivityDone(true);notify("Activity challenge completed ✦")}}>{activityDone?"Completed ✓":"Start challenge"}</button></div>}
         <button className="btn ghost" onClick={roomOpen.type==="Game"?closeGameRoom:()=>setRoomOpen(null)}>Close</button>
