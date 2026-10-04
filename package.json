@@ -17,7 +17,8 @@
     "react-dom": "^19.2.0",
     "drizzle-orm": "^0.44.7",
     "@neondatabase/serverless": "^1.0.2",
-    "@vercel/blob": "^2.6.1"
+    "@vercel/blob": "^2.6.1",
+    "@aws-sdk/client-rekognition": "^3.922.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
