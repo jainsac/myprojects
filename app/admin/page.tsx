@@ -29,7 +29,7 @@ export default function AdminPage(){
     if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
     setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);if(a.ok)setAnalytics(ad);if(fb.ok)setFeedback(fbd.feedback||[]);
   }
-  useEffect(()=>{load()},[]);
+  useEffect(()=>{load()},[analyticsRange]);
 
   async function saveReferralSettings(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/referral",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"settings",...refSettings})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save referral settings");return;}load();}
   async function savePlanConfig(){const r=await fetch("/api/plan-config",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({config:planConfig})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save plan configuration");return;}setPlanConfig(d.config);setError("");}
