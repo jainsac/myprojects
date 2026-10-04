@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Config={plans:Record<string,{prices:Record<string,number>,tag?:string,copy?:string}>,features:Array<{key:string,name:string,description:string,plans:string[]}>};
+type Config={launchMode:"FREE_ALL"|"MONETIZED";plans:Record<string,{prices:Record<string,number>,tag?:string,copy?:string}>,features:Array<{key:string,name:string,description:string,plans:string[],audience?:string[]}>;standaloneProducts:Array<any>;bundles:Array<any>};
 
 export default function Plans(){
   const [config,setConfig]=useState<Config|null>(null);
@@ -39,6 +39,7 @@ export default function Plans(){
       {offer&&<div className="safe">✓ Code valid · {offer.discountType==="PERCENT"?offer.discountValue+"% off":"₹"+offer.discountValue+" off"}{offer.rewardType&&offer.rewardType!=="DISCOUNT"?" · "+offer.rewardType:""}</div>}
       {offerError&&<div className="auth-error">{offerError}</div>}
     </section>
+    {config.launchMode==="FREE_ALL"&&<section className="panel" style={{marginBottom:18}}><div className="eyebrow">Launch testing</div><h2>🎉 Everything is free right now</h2><p className="sub">During the Cuddl testing phase, every user gets access to all premium-level features. This helps us test scale, engagement and feature usage before monetization is switched on.</p></section>}
     <div className="plan-grid">
       {plans.map(([name,plan])=>{
         const features=config.features.filter(f=>f.plans.includes(name));
