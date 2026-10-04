@@ -10,7 +10,7 @@ export async function GET(request:Request){
   try{
     const result=await get(pathname,{access:"private"});
     if(!result)return NextResponse.json({error:"Media not found."},{status:404});
-    return new Response(result.stream,{headers:{"Content-Type":result.blob.contentType||"application/octet-stream","Cache-Control":"private, max-age=60"}});
+    return new Response(result.stream,{headers:{"Content-Type":result.blob.contentType||"application/octet-stream","Content-Disposition":"inline","Cache-Control":"private, max-age=3600, stale-while-revalidate=86400"}});
   }catch(error){
     console.error("profile media read failed",error);
     return NextResponse.json({error:"Could not load media."},{status:404});
