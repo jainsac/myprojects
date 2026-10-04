@@ -13,6 +13,7 @@ export type PlanConfig = {
   features: Array<{key:string,name:string,description:string,plans:PlanName[],audience:Audience[]}>;
   standaloneProducts:StandaloneProduct[];
   bundles:FeatureBundle[];
+  adSettings:{enabled:boolean;freePlans:PlanName[];frequency:number;placement:"DISCOVERY_AFTER_N_PROFILES"};
 };
 
 export const DEFAULT_PLAN_CONFIG:PlanConfig={
@@ -28,6 +29,7 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     {id:"boost-3",name:"Boost ×3",description:"3 temporary discovery exposure boosts.",featureKey:"boost",audience:["ALL"],billing:"ONE_TIME",quantity:3,price:79,enabled:true},
     {id:"pre-match-5",name:"Pre-match Messages ×5",description:"5 pre-match messages.",featureKey:"pre_match_message",audience:["ALL"],billing:"ONE_TIME",quantity:5,price:99,enabled:true}
   ],
+  adSettings:{enabled:true,freePlans:["Basic"],frequency:10,placement:"DISCOVERY_AFTER_N_PROFILES"},
   bundles:[
     {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
   ],
@@ -80,7 +82,7 @@ export async function ensurePlanConfigSchema(){
 }
 function normalizeConfig(raw:any):PlanConfig{
   const c=raw||DEFAULT_PLAN_CONFIG;
-  return {launchMode:c.launchMode==="MONETIZED"?"MONETIZED":"FREE_ALL",plans:c.plans||DEFAULT_PLAN_CONFIG.plans,features:Array.isArray(c.features)?c.features.map((f:any)=>({...f,audience:Array.isArray(f.audience)&&f.audience.length?f.audience:["ALL"]})):DEFAULT_PLAN_CONFIG.features,standaloneProducts:Array.isArray(c.standaloneProducts)?c.standaloneProducts:DEFAULT_PLAN_CONFIG.standaloneProducts,bundles:Array.isArray(c.bundles)?c.bundles:DEFAULT_PLAN_CONFIG.bundles};
+  return {launchMode:c.launchMode==="MONETIZED"?"MONETIZED":"FREE_ALL",plans:c.plans||DEFAULT_PLAN_CONFIG.plans,features:Array.isArray(c.features)?c.features.map((f:any)=>({...f,audience:Array.isArray(f.audience)&&f.audience.length?f.audience:["ALL"]})):DEFAULT_PLAN_CONFIG.features,standaloneProducts:Array.isArray(c.standaloneProducts)?c.standaloneProducts:DEFAULT_PLAN_CONFIG.standaloneProducts,bundles:Array.isArray(c.bundles)?c.bundles:DEFAULT_PLAN_CONFIG.bundles,adSettings:{enabled:c.adSettings?.enabled!==false,freePlans:Array.isArray(c.adSettings?.freePlans)?c.adSettings.freePlans:["Basic"],frequency:Math.max(1,Number(c.adSettings?.frequency)||10),placement:"DISCOVERY_AFTER_N_PROFILES"}};
 }
 export async function getPlanConfig():Promise<PlanConfig>{
   await ensurePlanConfigSchema();
