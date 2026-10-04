@@ -85,7 +85,7 @@ function normalizeConfig(raw:any):PlanConfig{
 export async function getPlanConfig():Promise<PlanConfig>{
   await ensurePlanConfigSchema();
   const db=getDb();
-  const q=await db.execute(`SELECT config FROM plan_config WHERE id=1`);
+  const q=await db.execute(sql`SELECT config FROM plan_config WHERE id=1`);
   return normalizeConfig((q as any).rows?.[0]?.config);
 }
 export function normalizePlan(value:unknown):PlanName{
