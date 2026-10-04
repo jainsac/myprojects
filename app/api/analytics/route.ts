@@ -22,7 +22,7 @@ export async function GET(){
   if(!admin)return NextResponse.json({error:"Admin access required."},{status:403});
   await ensureMonetizationSchema();
   const db=getDb();
-  const totals=await db.execute(sql`SELECT COUNT(*)::int AS events,COUNT(DISTINCT user_id)::int AS users FROM monetization_events WHERE created_at>=now()-interval '30 days'`);
-  const byFeature=await db.execute(sql`SELECT COALESCE(feature_key,'core') AS feature_key,event_name,COUNT(*)::int AS count FROM monetization_events WHERE created_at>=now()-interval '30 days' GROUP BY 1,2 ORDER BY count DESC LIMIT 100`);
-  return NextResponse.json({windowDays:30,totals:(totals as any).rows?.[0]||{events:0,users:0},byFeature:(byFeature as any).rows||[]});
+  const totals=await db.execute(sql`SELECT COUNT(*)::int AS events,COUNT(DISTINCT user_id)::int AS users FROM monetization_events WHERE TRUE`);
+  const byFeature=await db.execute(sql`SELECT COALESCE(feature_key,'core') AS feature_key,event_name,COUNT(*)::int AS count FROM monetization_events WHERE TRUE GROUP BY 1,2 ORDER BY count DESC LIMIT 100`);
+  return NextResponse.json({windowDays:null,totals:(totals as any).rows?.[0]||{events:0,users:0},byFeature:(byFeature as any).rows||[]});
 }
