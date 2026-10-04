@@ -1,1 +1,16 @@
-export default function Help(){return <main><h1>Cuddl Help & Feedback</h1><p>Support centre.</p></main>}
+"use client";
+import { useState } from "react";
+export default function Help(){
+ const [type,setType]=useState("HELP"),[category,setCategory]=useState("GENERAL"),[subject,setSubject]=useState(""),[message,setMessage]=useState(""),[sent,setSent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ async function submit(){if(message.trim().length<5){setError("Please describe the issue or feedback.");return;}setBusy(true);setError("");try{const r=await fetch("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type,category,subject,message})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not submit");setSent(true);setMessage("");setSubject("");}catch(e:any){setError(e.message||"Could not submit");}finally{setBusy(false);}}
+ return <main className="policy-page"><a className="policy-back" href="/">← Back to Cuddl</a><div className="eyebrow">Cuddl Support</div><h1>Help & Feedback</h1><p className="sub">Get help, report a problem, or tell us what would make Cuddl better.</p>
+ <div className="grid">{[["👤","Account & Profile","Profile, verification, privacy and settings"],["💗","Discovery & Matching","Sparks, matches, filters and visibility"],["🎮","Games & Activities","Broken game, activity or room experience"],["💳","Plans & Payments","Plans, add-ons and purchase questions"]].map(x=><div className="card" key={x[0]}><b>{x[0]} {x[1]}</b><span>{x[2]}</span></div>)}</div>
+ {sent?<div className="panel"><h2>Thanks — we received it.</h2><p className="sub">Your message has been added to the Cuddl support queue.</p><button className="btn" onClick={()=>setSent(false)}>Send another</button></div>:<div className="panel">
+ <div className="chips"><button className={"chip "+(type==="HELP"?"active":"")} onClick={()=>setType("HELP")}>❓ Help request</button><button className={"chip "+(type==="FEEDBACK"?"active":"")} onClick={()=>setType("FEEDBACK")}>💬 Feedback</button></div>
+ <select className="field" value={category} onChange={e=>setCategory(e.target.value)}><option value="GENERAL">General</option><option value="ACCOUNT">Account & Profile</option><option value="DISCOVERY">Discovery & Matching</option><option value="GAMES">Games & Activities</option><option value="PAYMENTS">Plans & Payments</option><option value="BUG">Bug / Technical Issue</option><option value="SUGGESTION">Feature Suggestion</option></select>
+ <input className="field" placeholder="Subject (optional)" value={subject} onChange={e=>setSubject(e.target.value)}/><textarea className="field profile-textarea" maxLength={5000} placeholder={type==="HELP"?"Describe the problem and what you were trying to do…":"What should Cuddl improve? Tell us what you liked or disliked…"} value={message} onChange={e=>setMessage(e.target.value)}/>
+ {error&&<p className="auth-error">{error}</p>}<button className="btn" onClick={submit} disabled={busy}>{busy?"Sending…":type==="HELP"?"Send help request":"Send feedback"}</button>
+ </div>}
+ <div className="panel"><b>Quick guidance</b><p className="safe">For urgent concerns, use the controls directly from the relevant profile or conversation. For technical issues, include the screen, action, and what happened so we can reproduce it.</p></div>
+ </main>;
+}
