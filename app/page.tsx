@@ -135,6 +135,8 @@ export default function Home() {
   const [boostDuration, setBoostDuration] = useState("30");
   const [loungeFilter, setLoungeFilter] = useState("All");
   const [roomOpen, setRoomOpen] = useState<any>(null);
+  const [roomBusy, setRoomBusy] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
   const [promptRecordingTarget, setPromptRecordingTarget] = useState<{group:"personality"|"partner";index:number}|null>(null);
@@ -167,6 +169,14 @@ export default function Home() {
     "Memory Match":["Remember three things your partner says, then repeat them.","Find the matching pair before the timer ends."],
     "Chess Café":["Choose a colour and challenge someone in the room.","Play a friendly opening: no rating pressure."]
   };
+  async function createGameRoom(name:string, icon:string, meta:string){
+    setRoomBusy(true); try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",gameKey:name})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not create room.");resetGame();setRoomOpen({type:"Game",icon,name,meta,roomId:d.room.id,role:d.room.role,status:d.room.status,state:{}});notify("Game room created ✦");}catch(e){notify(e instanceof Error?e.message:"Could not create room.");}finally{setRoomBusy(false)}}
+  async function loadGameRooms(name:string){try{const r=await fetch("/api/game-rooms?game="+encodeURIComponent(name),{cache:"no-store"});const d=await r.json();if(Array.isArray(d.rooms))setAvailableRooms(d.rooms)}catch{}}
+  async function joinGameRoom(room:any){setRoomBusy(true);try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:room.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not join room.");resetGame();setRoomOpen({type:"Game",icon:roomOpen?.icon||"🎮",name:room.game_key,meta:"Multiplayer game",roomId:d.room.id,role:d.room.role,status:d.room.status,state:d.room.state||{}});notify("Joined game room 🎮");}catch(e){notify(e instanceof Error?e.message:"Could not join room.");}finally{setRoomBusy(false)}}
+  async function updateGameRoom(state:any){if(!roomOpen?.roomId)return;await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",roomId:roomOpen.roomId,state})}).catch(()=>{})}
+  async function closeGameRoom(){if(roomOpen?.roomId)await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"leave",roomId:roomOpen.roomId})).catch(()=>{});setRoomOpen(null);setAvailableRooms([])}
+  useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{}}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
+  useEffect(()=>{if(roomOpen?.type==="Game"&&!roomOpen?.roomId)loadGameRooms(roomOpen.name)},[roomOpen?.type,roomOpen?.name,roomOpen?.roomId]);
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
     setGameDicePos(0); setGameDice(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
@@ -174,10 +184,12 @@ export default function Home() {
   }
   function playTic(i:number){
     if(gameCells[i]) return;
+    if(roomOpen?.roomId && roomOpen.role && gameTurn!==(roomOpen.role==="HOST"?"X":"O")) return notify("Wait for your turn.");
     const next=[...gameCells]; next[i]=gameTurn;
     const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     const won=lines.some(([a,b,c])=>next[a]&&next[a]===next[b]&&next[a]===next[c]);
     setGameCells(next);
+    if(roomOpen?.roomId) updateGameRoom({game:"Tic-Tac-Toe",cells:next,turn:won||next.every(Boolean)?gameTurn:(gameTurn==="X"?"O":"X"),winner:won?gameTurn:(next.every(Boolean)?"DRAW":null)});
     if(won){notify(gameTurn+" wins Tic-Tac-Toe 🎉");return;}
     if(next.every(Boolean)){notify("Draw! 🤝");return;}
     setGameTurn(gameTurn==="X"?"O":"X");
@@ -846,7 +858,7 @@ export default function Home() {
           {activities.map(([icon,name,tags,count]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{count} · participants active</div></div><button className="join" onClick={() => {setActivityDone(false);setRoomOpen({type:"Activity",icon,name,meta:tags+" · "+count+" participants active"})}}>Join</button></div><div className="room-meta">{tags} · camera optional · spectator mode</div></div>)}
 
           <div className="eyebrow" style={{marginTop:18}}>Games</div>
-          {games.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={() => {resetGame();setRoomOpen({type:"Game",icon,name,meta})}}>Play</button></div></div>)}
+          {games.map(([icon,name,meta]) => <div className="room" key={name}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" disabled={roomBusy} onClick={()=>createGameRoom(name,icon,meta)}>Play</button></div></div>)}
 
           {(loungeFilter==="All"||loungeFilter==="Music") && <><div className="eyebrow" style={{marginTop:18}}>Music</div>
           {music.map(([icon,name,meta]) => <div className="room" key={name} onClick={()=>setRoomOpen({type:"Music",icon,name,meta})}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={(e)=>{e.stopPropagation();setRoomOpen({type:"Music",icon,name,meta})}}>Join</button></div><div className="room-meta">🎥 Camera optional · 🎙️ Mic optional · 🎉 Cheer = appreciation · Spark = romantic interest</div></div>)}</>}
@@ -958,7 +970,7 @@ export default function Home() {
         <button className="btn ghost" onClick={()=>setBoostOpen(false)}>Close</button>
       </div></div>}
       {roomOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="popup-icon">{roomOpen.icon}</div><div className="eyebrow">{roomOpen.type}</div><h2>{roomOpen.name}</h2><p className="sub">{roomOpen.meta || "Live beta experience"} · Join, play and give Cuddl feedback.</p>
+        <div className="popup-icon">{roomOpen.icon}</div><div className="eyebrow">{roomOpen.type}</div><h2>{roomOpen.name}</h2>{roomOpen.type==="Game"&&<div className="panel game-room-bar"><b>{roomOpen.roomId?"Room "+String(roomOpen.roomId).slice(0,8):"Public game lobby"}</b><p className="sub">{roomOpen.roomId?(roomOpen.role==="HOST"?(roomOpen.status==="ACTIVE"?"Opponent joined ✓":"Waiting for opponent…"):"You joined as opponent ✓"):"Create a room or join an open room."}</p>{!roomOpen.roomId&&(availableRooms.length?availableRooms.map((r:any)=><div className="room" key={r.id}><div className="grow"><b>Open room</b><div className="room-meta">Room {String(r.id).slice(0,8)}</div></div><button className="join" disabled={roomBusy} onClick={()=>joinGameRoom(r)}>Join</button></div>):<p className="safe">No open rooms yet.</p>)}</div>}<p className="sub">{roomOpen.meta || "Live beta experience"} · Join, play and give Cuddl feedback.</p>
         {roomOpen.type==="Game" ? <div>
           {roomOpen.name==="Tic-Tac-Toe" && <><div className="game-status">Turn: {gameTurn}</div><div className="tic-board">{gameCells.map((v,i)=><button className="tic-cell" key={i} onClick={()=>playTic(i)}>{v}</button>)}</div><button className="btn ghost" onClick={resetGame}>Restart</button></>}
           {roomOpen.name==="Rapid Quiz" && <><div className="game-status">Question {gameQuizIndex+1}/5 · Score {gameQuizScore}</div><div className="panel"><b>{quizQuestions[gameQuizIndex][0]}</b><div className="game-options">{quizQuestions[gameQuizIndex][1].map((x,i)=><button className="btn ghost" key={x} onClick={()=>{const score=gameQuizScore+(i===quizQuestions[gameQuizIndex][2]?1:0);setGameQuizScore(score);if(gameQuizIndex===4){notify("Quiz complete: "+score+"/5")}else setGameQuizIndex(gameQuizIndex+1)}}>{x}</button>)}</div></div></>}
@@ -968,7 +980,7 @@ export default function Home() {
           {roomOpen.name==="Memory Match" && <><div className="prompt-card"><small>MEMORY CHALLENGE</small><b>Match pairs with a real room partner.</b><span>This beta build tracks participation; real-time multiplayer pairing is the next room layer.</span></div><button className="btn" onClick={()=>notify("Memory Match room joined 🧩")}>Join round</button></>}
           {roomOpen.name==="Chess Café" && <><div className="chess-board">{Array.from({length:64},(_,i)=><span key={i} className={((Math.floor(i/8)+i)%2===0)?"light":"dark"}>{i===0?"♜":i===1?"♞":i===2?"♝":i===3?"♛":i===4?"♚":i===5?"♝":i===6?"♞":i===7?"♜":i>47&&i<56?"♙":""}</span>)}</div><button className="btn" onClick={()=>notify("Chess challenge joined ♟️")}>Join challenge</button></>}
         </div> : <div><div className="verification-list"><div>🎥 Camera optional</div><div>🎙️ Microphone optional</div><div>💗 Spark stays optional</div></div><div className="prompt-card"><small>ACTIVITY CHALLENGE</small><b>{roomOpen.name}</b><span>Complete one small shared challenge and start a conversation.</span></div><button className="btn" disabled={activityDone} onClick={()=>{setActivityDone(true);notify("Activity challenge completed ✦")}}>{activityDone?"Completed ✓":"Start challenge"}</button></div>}
-        <button className="btn ghost" onClick={()=>setRoomOpen(null)}>Close</button>
+        <button className="btn ghost" onClick={roomOpen.type==="Game"?closeGameRoom:()=>setRoomOpen(null)}>Close</button>
       </div></div>}
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
