@@ -24,6 +24,7 @@ export async function PATCH(request:Request){
     incoming.standaloneProducts=Array.isArray(incoming.standaloneProducts)?incoming.standaloneProducts:[];
     incoming.adSettings={enabled:incoming.adSettings?.enabled!==false,freePlans:Array.isArray(incoming.adSettings?.freePlans)?incoming.adSettings.freePlans.filter((p:string)=>PLAN_NAMES.includes(p as any)):["Basic"],frequency:Math.max(1,Number(incoming.adSettings?.frequency)||10),placement:"DISCOVERY_AFTER_N_PROFILES"};
     incoming.bundles=Array.isArray(incoming.bundles)?incoming.bundles:[];
+    incoming.experiences=Array.isArray(incoming.experiences)?incoming.experiences.map((e:any)=>({id:String(e.id||"").trim(),name:String(e.name||"").trim().slice(0,120),type:e.type==="ACTIVITY"?"ACTIVITY":"GAME",featureKey:String(e.featureKey||"").trim(),plans:Array.isArray(e.plans)?e.plans.filter((p:string)=>PLAN_NAMES.includes(p as any)):[],spectatorPlans:Array.isArray(e.spectatorPlans)?e.spectatorPlans.filter((p:string)=>PLAN_NAMES.includes(p as any)):[],audience:Array.isArray(e.audience)?e.audience.filter((a:string)=>a==="ALL"||a==="FEMALE"):["ALL"],dailyLimit:e.dailyLimit?Math.max(1,Number(e.dailyLimit)||1):undefined,enabled:e.enabled!==false,priority:e.priority?Math.max(0,Number(e.priority)||0):undefined})).filter((e:any)=>e.id&&e.name&&e.featureKey):[];
     incoming.features=incoming.features.map((f:any)=>({
       key:String(f.key||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"_"),
       name:String(f.name||"").trim().slice(0,120),
