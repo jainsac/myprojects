@@ -521,6 +521,7 @@ export default function Home() {
   }, [discoverProfiles,matchFilters,user]);
   const showDiscoveryAd=!!planConfig?.adSettings?.enabled && (planConfig?.adSettings?.freePlans||["Basic"]).includes("Basic") && index>0 && index%Math.max(1,Number(planConfig?.adSettings?.frequency)||10)===0;
   const person = useMemo(() => searchableProfiles.length ? searchableProfiles[index % searchableProfiles.length] : {displayName:"",name:"",age:0,city:"",initial:"",tags:[],score:0,bio:"",lifestylePreferences:{}}, [index, searchableProfiles]);
+  useEffect(()=>{ if(!user || !searchableProfiles.length || showDiscoveryAd) return; const p=searchableProfiles[index % searchableProfiles.length]; if(!p?.id) return; fetch("/api/analytics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:"discover_profile_view",featureKey:"discovery",metadata:{profileId:p.id,position:index+1}})}).catch(()=>{}); },[user,index,searchableProfiles.length,showDiscoveryAd]);
   const personPhotos = useMemo(() => {
     const p:any=person||{};
     const lp=p.lifestylePreferences||{};
