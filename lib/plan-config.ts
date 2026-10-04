@@ -59,7 +59,7 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     ["private_albums","Private albums / enhanced privacy","Enhanced media privacy controls",["Premium"]],
     ["advanced_connections","Advanced Connection features","Advanced connection tools",["Premium"]],
     ["message_bottle","Message in a Bottle","Send a message/media bottle",["Pro","Premium"]]
-  ].map(([key,name,description,plans])=>({key,name,description,plans:plans as PlanName[],audience:["ALL"]})) 
+  ].map(([key,name,description,plans]:[string,string,string,string[]])=>({key,name,description,plans:plans as PlanName[],audience:["ALL"]})) 
 };
 
 let ready:Promise<void>|null=null;
