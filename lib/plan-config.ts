@@ -4,9 +4,15 @@ import { getDb } from "./db";
 export const PLAN_NAMES = ["Basic","Plus","Pro","Premium"] as const;
 export type PlanName = typeof PLAN_NAMES[number];
 
+export type Audience = "ALL" | "FEMALE";
+export type StandaloneProduct = { id:string; name:string; description:string; featureKey:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; quantity:number; price:number; validityDays?:number; enabled:boolean; };
+export type FeatureBundle = { id:string; name:string; description:string; audience:Audience[]; billing:"ONE_TIME"|"MONTHLY"|"WEEKLY"; price:number; validityDays?:number; enabled:boolean; items:Array<{featureKey:string,quantity:number}>; };
 export type PlanConfig = {
+  launchMode:"FREE_ALL"|"MONETIZED";
   plans: Record<PlanName,{prices:Record<string,number>,tag?:string,copy?:string}>;
-  features: Array<{key:string,name:string,description:string,plans:PlanName[]}>;
+  features: Array<{key:string,name:string,description:string,plans:PlanName[],audience:Audience[]}>;
+  standaloneProducts:StandaloneProduct[];
+  bundles:FeatureBundle[];
 };
 
 export const DEFAULT_PLAN_CONFIG:PlanConfig={
@@ -16,6 +22,15 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     Pro:{prices:{Monthly:149,Quarterly:349,"Half-year":599,Annual:999},tag:"From ₹149/month",copy:"Higher visibility and stronger interaction priority."},
     Premium:{prices:{Monthly:299,Quarterly:799,"Half-year":1499,Annual:2499},tag:"From ₹299/month",copy:"The highest Cuddl visibility, interaction and activity toolkit."}
   },
+  launchMode:"FREE_ALL",
+  standaloneProducts:[
+    {id:"super-spark-10",name:"Super Sparks ×10",description:"10 higher-visibility interest signals.",featureKey:"super_spark",audience:["ALL"],billing:"ONE_TIME",quantity:10,price:49,enabled:true},
+    {id:"boost-3",name:"Boost ×3",description:"3 temporary discovery exposure boosts.",featureKey:"boost",audience:["ALL"],billing:"ONE_TIME",quantity:3,price:79,enabled:true},
+    {id:"pre-match-5",name:"Pre-match Messages ×5",description:"5 pre-match messages.",featureKey:"pre_match_message",audience:["ALL"],billing:"ONE_TIME",quantity:5,price:99,enabled:true}
+  ],
+  bundles:[
+    {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
+  ],
   features:[
     ["profile","Profile creation & mandatory completion","Create and maintain a complete Cuddl profile",["Basic","Plus","Pro","Premium"]],
     ["discovery","Discovery & core filters","Browse eligible profiles and core discovery filters",["Basic","Plus","Pro","Premium"]],
@@ -44,7 +59,7 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     ["private_albums","Private albums / enhanced privacy","Enhanced media privacy controls",["Premium"]],
     ["advanced_connections","Advanced Connection features","Advanced connection tools",["Premium"]],
     ["message_bottle","Message in a Bottle","Send a message/media bottle",["Pro","Premium"]]
-  ].map(([key,name,description,plans])=>({key,name,description,plans:plans as PlanName[]})) 
+  ].map(([key,name,description,plans])=>({key,name,description,plans:plans as PlanName[],audience:["ALL"]})) 
 };
 
 let ready:Promise<void>|null=null;
@@ -63,19 +78,23 @@ export async function ensurePlanConfigSchema(){
   ready=ready.catch(e=>{ready=null;throw e});
   return ready;
 }
+function normalizeConfig(raw:any):PlanConfig{
+  const c=raw||DEFAULT_PLAN_CONFIG;
+  return {launchMode:c.launchMode==="MONETIZED"?"MONETIZED":"FREE_ALL",plans:c.plans||DEFAULT_PLAN_CONFIG.plans,features:Array.isArray(c.features)?c.features.map((f:any)=>({...f,audience:Array.isArray(f.audience)&&f.audience.length?f.audience:["ALL"]})):DEFAULT_PLAN_CONFIG.features,standaloneProducts:Array.isArray(c.standaloneProducts)?c.standaloneProducts:DEFAULT_PLAN_CONFIG.standaloneProducts,bundles:Array.isArray(c.bundles)?c.bundles:DEFAULT_PLAN_CONFIG.bundles};
+}
 export async function getPlanConfig():Promise<PlanConfig>{
   await ensurePlanConfigSchema();
   const db=getDb();
-  const q=await db.execute(sql`SELECT config FROM plan_config WHERE id=1`);
-  const c=(q as any).rows?.[0]?.config;
-  return c||DEFAULT_PLAN_CONFIG;
+  const q=await db.execute(`SELECT config FROM plan_config WHERE id=1`);
+  return normalizeConfig((q as any).rows?.[0]?.config);
 }
 export function normalizePlan(value:unknown):PlanName{
   const p=String(value||"Basic").toLowerCase();
   return p==="premium"?"Premium":p==="pro"?"Pro":p==="plus"?"Plus":"Basic";
 }
-export async function hasPlanFeature(plan:unknown,key:string){
+export async function hasPlanFeature(plan:unknown,key:string,audience:unknown="ALL"){
   const config=await getPlanConfig();
-  const p=normalizePlan(plan);
-  return config.features.some(f=>f.key===key&&f.plans.includes(p));
+  if(config.launchMode==="FREE_ALL")return true;
+  const p=normalizePlan(plan); const a=String(audience||"ALL").toUpperCase() as Audience;
+  return config.features.some(f=>f.key===key&&f.plans.includes(p)&&(f.audience?.includes("ALL")||f.audience?.includes(a)));
 }
