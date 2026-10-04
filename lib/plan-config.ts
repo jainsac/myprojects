@@ -41,7 +41,21 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     {id:"compatibility-clash",name:"Compatibility Clash",type:"GAME",featureKey:"compatibility",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
     {id:"beat-clock",name:"Beat the Clock",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
     {id:"word-chain",name:"Word Chain Battle",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
-    {id:"picture-puzzle",name:"Picture Puzzle Duel",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3}
+    {id:"picture-puzzle",name:"Picture Puzzle Duel",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"guess-answer",name:"Guess My Answer",type:"GAME",featureKey:"compatibility",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"story-builder",name:"Story Builder",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"song-battle",name:"Song Battle",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"movie-emoji",name:"Movie Emoji Battle",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"memory-about-me",name:"Memory About Me",type:"GAME",featureKey:"compatibility",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"fast-questions",name:"Fast Questions Duel",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"cuddl-quest",name:"Cuddl Quest",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"escape-room",name:"Two-Person Escape Room",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"mystery-match",name:"Mystery Match",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"love-language",name:"Love Language Challenge",type:"GAME",featureKey:"compatibility",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"future-together",name:"Future Together",type:"GAME",featureKey:"compatibility",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"dream-life",name:"Dream Life Builder",type:"GAME",featureKey:"compatibility",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"strategy-couple",name:"Couple Strategy Game",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5},
+    {id:"cuddl-championship",name:"Cuddl Championship",type:"GAME",featureKey:"premium_rooms",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:5}
   ],
   bundles:[
     {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
