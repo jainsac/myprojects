@@ -43,7 +43,14 @@ export async function POST(request:Request){
       if(!room)return NextResponse.json({error:"Room not found."},{status:404});
       if(room.host_user_id===current.user.id)return NextResponse.json({room:{...room,role:"HOST"}});
       if(room.guest_user_id && room.guest_user_id!==current.user.id)return NextResponse.json({error:"Room is full."},{status:409});
-      await db.execute(sql`UPDATE game_rooms SET guest_user_id=${current.user.id},status='ACTIVE',updated_at=now() WHERE id=${roomId} AND guest_user_id IS NULL`);
+      const joined=await db.execute(sql`UPDATE game_rooms SET guest_user_id=${current.user.id},status='ACTIVE',updated_at=now() WHERE id=${roomId} AND guest_user_id IS NULL AND status='OPEN'`);
+      const joinedCount=Number((joined as any).rowCount||0);
+      if(!joinedCount){
+        const latest=await db.execute(sql`SELECT guest_user_id,status,state,game_key FROM game_rooms WHERE id=${roomId} LIMIT 1`);
+        const currentRoom=(latest as any).rows?.[0];
+        if(currentRoom?.guest_user_id===current.user.id)return NextResponse.json({room:{id:roomId,gameKey:currentRoom.game_key,status:currentRoom.status,role:"GUEST",state:currentRoom.state||{}}});
+        return NextResponse.json({error:"Room is no longer available."},{status:409});
+      }
       return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:"ACTIVE",role:"GUEST",state:room.state||{}}});
     }
 
