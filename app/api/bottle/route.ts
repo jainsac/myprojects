@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/auth";
 import { getDb } from "../../../lib/db";
 import { ensureRewardsSchema } from "../../../lib/rewards";
+import { hasPlanFeature, normalizePlan } from "../../../lib/plan-config";
 
 export async function GET(){
   await ensureRewardsSchema();
@@ -25,7 +26,7 @@ export async function POST(request:Request){
   const body=await request.json(); const db=getDb();
   await db.execute(sql`UPDATE bottles SET status='EXPIRED',opened_at=COALESCE(opened_at,now()),opened_action='EXPIRED' WHERE status='ACTIVE' AND expires_at IS NOT NULL AND expires_at<=now()`);
   const plan=String((current.profile?.lifestylePreferences as any)?.plan||"BASIC").toUpperCase();
-  if(plan!=="PRO"&&plan!=="PREMIUM")return NextResponse.json({error:"Message in a Bottle is available on Pro and Premium plans."},{status:403});
+  if(!(await hasPlanFeature(normalizePlan(plan),"message_bottle")))return NextResponse.json({error:"Message in a Bottle is not included in your current plan."},{status:403});
   const settings=await db.execute(sql`SELECT * FROM bottle_settings WHERE id=1`); const s=(settings as any).rows?.[0];
   const limit=plan==="PREMIUM"?Number(s?.premium_monthly_limit||5):Number(s?.pro_monthly_limit||2);
   const count=await db.execute(sql`SELECT COUNT(*)::int AS count FROM bottles WHERE sender_id=${current.user.id} AND created_at>=date_trunc('month',now())`);
