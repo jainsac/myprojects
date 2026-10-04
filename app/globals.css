@@ -296,3 +296,13 @@
   .privacy-actions .btn{min-height:46px;font-size:11px;padding:9px 7px}
   .profile-preview-panel .prompt-package-media{grid-template-columns:1fr}
 }
+
+
+/* Messaging + verification UX */
+.topbar-actions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap}
+.top-action-link{position:relative;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 10px;display:flex;align-items:center;gap:5px;color:var(--ink);font:inherit;font-size:11px;font-weight:800;white-space:nowrap}
+.top-action-icon{font-size:15px;line-height:1}
+.notification-badge{position:absolute;right:-3px;top:-5px;min-width:17px;height:17px;border-radius:99px;background:var(--r);color:#fff;font-size:9px;display:grid;place-items:center;padding:0 4px;border:2px solid #fff}
+.messages-shortcut{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #f0dce0;background:#fff8f9}
+.messages-shortcut .btn{margin:0;white-space:nowrap}
+@media(max-width:520px){.top-action-link{padding:8px}.top-action-link span:not(.top-action-icon){display:none}.messages-shortcut{align-items:flex-start}.messages-shortcut .btn{padding:9px 12px}}
