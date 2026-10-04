@@ -62,6 +62,17 @@ export async function POST(request:Request){
       return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:"ACTIVE",role:"GUEST",state:room.state||{}}});
     }
 
+    if(action==="reaction"){
+      if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
+      const reaction=String(body.reaction||"").slice(0,24);
+      if(!reaction)return NextResponse.json({error:"Reaction is required."},{status:400});
+      const member=await db.execute(sql`SELECT id FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
+      if(!((member as any).rows?.length))return NextResponse.json({error:"Room not found."},{status:404});
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS game_room_reactions (id bigserial PRIMARY KEY,room_id text NOT NULL,user_id text NOT NULL,reaction text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`);
+      await db.execute(sql`INSERT INTO game_room_reactions(room_id,user_id,reaction) VALUES(${roomId},${current.user.id},${reaction})`);
+      return NextResponse.json({ok:true});
+    }
+
     if(action==="state"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
       const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,state,status,updated_at FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
