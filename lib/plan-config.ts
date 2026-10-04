@@ -37,7 +37,11 @@ export const DEFAULT_PLAN_CONFIG:PlanConfig={
     {id:"memory",name:"Memory Match",type:"GAME",featureKey:"paid_activity_access",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],dailyLimit:3,enabled:true,priority:2},
     {id:"chess",name:"Chess Café",type:"GAME",featureKey:"premium_rooms",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
     {id:"deep-talk",name:"Deep Talk Circle",type:"ACTIVITY",featureKey:"paid_activity_access",plans:["Plus","Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:2},
-    {id:"date-tools",name:"Premium Date Challenge",type:"ACTIVITY",featureKey:"date_tools",plans:["Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:4}
+    {id:"couple-trivia",name:"Couple Trivia Battle",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"compatibility-clash",name:"Compatibility Clash",type:"GAME",featureKey:"compatibility",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"beat-clock",name:"Beat the Clock",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"word-chain",name:"Word Chain Battle",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3},
+    {id:"picture-puzzle",name:"Picture Puzzle Duel",type:"GAME",featureKey:"paid_activity_access",plans:["Pro","Premium"],spectatorPlans:["Basic","Plus","Pro","Premium"],audience:["ALL"],enabled:true,priority:3}
   ],
   bundles:[
     {id:"premium-starter",name:"Premium Starter Bundle",description:"A starter pack of premium actions.",audience:["ALL"],billing:"ONE_TIME",price:199,validityDays:30,enabled:true,items:[{featureKey:"super_spark",quantity:10},{featureKey:"boost",quantity:3},{featureKey:"pre_match_message",quantity:5}]}
