@@ -53,7 +53,7 @@ export async function GET() {
 
   const rows = await db.select({
     id: users.id, displayName: profiles.displayName, city: profiles.city, bio: profiles.bio, dateOfBirth: profiles.dateOfBirth, updatedAt: users.updatedAt,
-    avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals, lifestylePreferences: profiles.lifestylePreferences,
+    avatarUrl: profiles.avatarUrl, relationshipGoals: profiles.relationshipGoals, verification: profiles.verification, lifestylePreferences: profiles.lifestylePreferences,
   }).from(users).innerJoin(profiles, eq(profiles.userId, users.id)).where(and(...conditions)).limit(30);
 
   const sent = await db.select({ toUserId: sparks.toUserId }).from(sparks).where(eq(sparks.fromUserId, current.user.id));
