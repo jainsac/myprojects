@@ -20,6 +20,13 @@ const activities = [
   ["🥾", "Weekend Trek Planning", "Trekking · Outdoors", "14/18"],
   ["📸", "Delhi Street Photo Walk", "Photography · City", "9/12"],
   ["🌱", "Balcony Garden Show & Tell", "Gardening · Nature", "7/10"],
+  ["☕", "20-Minute Coffee Date", "Conversation · Dating", "10/12"],
+  ["🎤", "Karaoke Pair Challenge", "Music · Fun", "8/12"],
+  ["🧠", "Deep Talk Circle", "Questions · Connection", "9/15"],
+  ["😂", "Meme & Laugh Exchange", "Humour · Social", "13/20"],
+  ["🌇", "Sunset Story Swap", "Stories · Lifestyle", "6/10"],
+  ["🎨", "Draw My Vibe", "Art · Personality", "7/10"],
+  ["💚", "Green Flag Lab", "Compatibility · Dating", "11/16"],
   ["✈️", "Travel Stories & Dream Trips", "Travel · Adventure", "18/25"],
   ["🎨", "Sketch Together", "Art · Creativity", "6/10"],
 ];
@@ -31,6 +38,14 @@ const games = [
   ["⭕", "Tic-Tac-Toe", "Quick 1-on-1"],
   ["🐍", "Snake Sprint", "Beat the room score"],
   ["🧠", "Rapid Quiz", "5 quick questions"],
+  ["🧩", "Memory Match", "Find pairs together"],
+  ["🎭", "Emoji Guess", "Guess the story"],
+  ["💚", "Green Flag / Red Flag", "Fast compatibility"],
+  ["💬", "Would You Rather", "Quick choices"],
+  ["🎲", "Two Truths & a Lie", "Guess the lie"],
+  ["⚡", "5 Second Challenge", "Answer before time"],
+  ["🎵", "Guess the Song", "Music challenge"],
+  ["🎬", "Guess the Movie", "Emoji movie quiz"],
 ];
 
 const music = [
@@ -127,6 +142,59 @@ export default function Home() {
   const showcaseRecorderRef = useRef<MediaRecorder | null>(null);
   const showcaseStreamRef = useRef<MediaStream | null>(null);
   const showcaseChunksRef = useRef<Blob[]>([]);
+  const [activityDone, setActivityDone] = useState(false);
+  const [gameTurn, setGameTurn] = useState<"X"|"O">("X");
+  const [gameCells, setGameCells] = useState<string[]>(Array(9).fill(""));
+  const [gameQuizIndex, setGameQuizIndex] = useState(0);
+  const [gameQuizScore, setGameQuizScore] = useState(0);
+  const [gameDicePos, setGameDicePos] = useState(0);
+  const [gameDice, setGameDice] = useState(0);
+  const [gameTarget, setGameTarget] = useState(0);
+  const [gameScore, setGameScore] = useState(0);
+  const [gamePrompt, setGamePrompt] = useState("");
+  const quizQuestions = [
+    ["Which planet is known as the Red Planet?",["Earth","Mars","Venus","Jupiter"],1],
+    ["Which is the largest ocean?",["Atlantic","Indian","Pacific","Arctic"],2],
+    ["Which language has the most native speakers?",["English","Hindi","Mandarin","Spanish"],2],
+    ["What does a rainbow contain?",["Only red","Seven colours","Five colours","Ten colours"],1],
+    ["Which is a healthy first-date activity?",["Public coffee","Sharing passwords","Skipping safety","Ignoring boundaries"],0]
+  ] as [string,string[],number][];
+  const promptBank:Record<string,string[]> = {
+    "Rapid Fire + Truth & Dare":["Beach or mountains?","What always makes you laugh?","Truth: biggest green flag?","Dare: send your funniest emoji story."],
+    "Would You Rather":["Travel the world or build a dream home?","Sunrise date or midnight drive?","Cook together or order in?","Voice call or game night?"],
+    "Two Truths & a Lie":["Two true facts and one lie — guess mine.","What's a surprising hobby?","What's something people assume incorrectly about you?","Tell two truths and make one believable lie."],
+    "Emoji Guess":["🎬❤️🦁 — guess the movie.","☕🌧️📖 — describe this date.","✈️🏔️📸 — where are we?","🍕🎮🌙 — what kind of night is this?"],
+    "Memory Match":["Remember three things your partner says, then repeat them.","Find the matching pair before the timer ends."],
+    "Chess Café":["Choose a colour and challenge someone in the room.","Play a friendly opening: no rating pressure."]
+  };
+  function resetGame(){
+    setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
+    setGameDicePos(0); setGameDice(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
+    setGamePrompt("");
+  }
+  function playTic(i:number){
+    if(gameCells[i]) return;
+    const next=[...gameCells]; next[i]=gameTurn;
+    const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    const won=lines.some(([a,b,c])=>next[a]&&next[a]===next[b]&&next[a]===next[c]);
+    setGameCells(next);
+    if(won){notify(gameTurn+" wins Tic-Tac-Toe 🎉");return;}
+    if(next.every(Boolean)){notify("Draw! 🤝");return;}
+    setGameTurn(gameTurn==="X"?"O":"X");
+  }
+  function rollDice(){
+    const n=1+Math.floor(Math.random()*6); setGameDice(n); setGameDicePos(p=>Math.min(30,p+n));
+    if(gameDicePos+n>=30) notify("Finish! You won the Ludo sprint 🏁");
+  }
+  function tapTarget(){
+    setGameScore(s=>s+1); setGameTarget(Math.floor(Math.random()*20));
+    if(gameScore+1>=10) notify("Snake Sprint complete! 🐍");
+  }
+  function nextPrompt(){
+    const name=String(roomOpen?.name||"Rapid Fire + Truth & Dare");
+    const list=promptBank[name]||promptBank["Rapid Fire + Truth & Dare"];
+    setGamePrompt(list[Math.floor(Math.random()*list.length)]);
+  }
   useEffect(() => { Promise.all([fetch("/api/me"),fetch("/api/plan-config")]).then(async ([m,p])=>{const md=await m.json();const pd=await p.json();if(md.authenticated)setUser(md);if(pd?.plans)setPlanConfig(pd);}).finally(()=>setAuthChecked(true)); }, []);
   useEffect(() => {
     if(!user) return;
