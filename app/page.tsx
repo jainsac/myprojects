@@ -118,7 +118,7 @@ export default function Home() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [profileModal, setProfileModal] = useState<null | "edit" | "privacy" | "feature">(null);
   const [activeFeature, setActiveFeature] = useState({title:"",copy:""});
-  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],profileShowcase:[],personalityStickers:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",languages:[],heightCm:"",qualification:""});
+  const [profileDraft, setProfileDraft] = useState<any>({displayName:"",city:"",state:"",bio:"",gender:"",desiredGender:"ANY",maritalStatus:"",personalityPrompts:[],partnerPrompts:[],profileShowcase:[],personalityStickers:[],foodPreference:"",diet:"",company:"",profession:"",religion:"",community:"",relationshipGoal:"",education:"",children:"",pets:"",smoking:"",drinking:"",exercise:"",language:"",languages:[],heightCm:""});
   const profileStates=["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh"];
   const profileLanguages=["Hindi","English","Bengali","Telugu","Marathi","Tamil","Urdu","Gujarati","Kannada","Odia","Malayalam","Punjabi","Assamese","Maithili","Sanskrit","Kashmiri","Nepali","Konkani","Sindhi","Dogri","Manipuri","Bodo","Santali","French","German","Spanish","Italian","Portuguese","Russian","Arabic","Chinese","Japanese","Korean","Other"];
   const profileQualifications=["10th / Secondary","12th / Higher Secondary","ITI / Vocational","Diploma","B.A.","B.Com.","B.Sc.","B.Tech / B.E.","BBA","BCA","MBBS","BDS","LLB","B.Ed.","B.Pharm","M.A.","M.Com.","M.Sc.","M.Tech / M.E.","MBA","MCA","MD / MS","LLM","M.Ed.","Ph.D.","Other"];
@@ -279,6 +279,7 @@ export default function Home() {
     setProfileOnboarding(!complete);
     setOnboardingPromptOpen(!complete);
     setOnboardingChecked(true);
+    if(complete && freeVerificationStatus !== "verified") setVerificationOpen(true);
   }, [user]);
   useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => { if(!user) return; setLocationGranted(!!user?.profile?.lifestylePreferences?.locationGranted); if(typeof Notification!=="undefined") setNotificationPermission(Notification.permission); }, [user]);
@@ -373,7 +374,7 @@ export default function Home() {
     setOnboardingPromptOpen(false);
     const p=user?.profile||{};
     const lp=p.lifestylePreferences||{};
-    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts.map((x:any)=>({...x})):[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts.map((x:any)=>({...x})):[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),qualification:String(lp.qualification||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),languages:Array.isArray(lp.languages)?lp.languages.map(String):(lp.language?[String(lp.language)]:[]),heightCm:String(lp.heightCm||""),locationGranted:!!lp.locationGranted,locationLatitude:String(lp.locationLatitude||""),locationLongitude:String(lp.locationLongitude||""),locationAccuracy:String(lp.locationAccuracy||"")});
+    setProfileDraft({displayName:String(p.displayName||""),city:String(p.city||""),state:String(lp.state||""),bio:String(p.bio||""),gender:String(lp.gender||""),desiredGender:String(lp.desiredGender||"ANY"),maritalStatus:String(lp.maritalStatus||""),personalityPrompts:Array.isArray(lp.personalityPrompts)?lp.personalityPrompts.map((x:any)=>({...x})):[],partnerPrompts:Array.isArray(lp.partnerPrompts)?lp.partnerPrompts.map((x:any)=>({...x})):[],profileShowcase:Array.isArray(lp.profileShowcase)?lp.profileShowcase:[],personalityStickers:Array.isArray(lp.personalityStickers)?lp.personalityStickers:[],foodPreference:String(lp.foodPreference||""),diet:String(lp.diet||""),company:String(lp.company||""),profession:String(lp.profession||""),religion:String(lp.religion||""),community:String(lp.community||""),relationshipGoal:String(lp.relationshipGoal||""),education:String(lp.education||""),children:String(lp.children||""),pets:String(lp.pets||""),smoking:String(lp.smoking||""),drinking:String(lp.drinking||""),exercise:String(lp.exercise||""),language:String(lp.language||""),languages:Array.isArray(lp.languages)?lp.languages.map(String):(lp.language?[String(lp.language)]:[]),heightCm:String(lp.heightCm||""),locationGranted:!!lp.locationGranted,locationLatitude:String(lp.locationLatitude||""),locationLongitude:String(lp.locationLongitude||""),locationAccuracy:String(lp.locationAccuracy||"")});
     setProfileModal("edit");
   }
   async function requestAiChatCoach(){
@@ -791,7 +792,7 @@ export default function Home() {
         <div className="brand">Cuddl</div>
         <div className="topbar-actions">
           <button className="top-profile-link" aria-label="Open profile" onClick={()=>setTab("profile")}>
-            <span className="top-profile-avatar">{myProfileAvatarSrc?<img src={myProfileAvatarSrc} alt="" />:myProfileInitial}</span>
+            <span className="top-profile-avatar">{myProfileAvatarSrc?<img loading="eager" decoding="async" src={myProfileAvatarSrc} alt="" />:myProfileInitial}</span>
             <span>Profile</span>
           </button>
           <button className="icon-btn heart-icon-btn" aria-label="Safety Center" onClick={() => notify("Safety Center ready")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.9c0 5.2-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.9A4.7 4.7 0 0 1 12 6.3a4.7 4.7 0 0 1 8.8 2.6Z"/></svg></button>
@@ -805,7 +806,7 @@ export default function Home() {
           <h1 className="hero-title">Find the right people for you.</h1>
           <p className="sub">Use as many filters as you like. More meaningful preferences can make discovery more relevant.</p>
 
-          <section className="panel search-panel">
+          <details className="panel search-panel" open={false}>
             <div className="search-panel-head"><div><div className="eyebrow">Search & filters</div><b>Refine your discovery</b></div><span className="safe">{searchableProfiles.length} profiles</span></div>
             <div className="filter-section-title">Basics</div>
             <div className="filter-grid">
@@ -844,12 +845,12 @@ export default function Home() {
               {filterField("photos","Photos",["yes",""])}
             </div>
             <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
-          </section>
+          </details>
 
           {showDiscoveryAd ? <section className="panel discovery-ad-slot"><div className="ad-kicker">ADVERTISEMENT</div><div className="ad-placeholder"><span>Sponsored</span><b>Support Cuddl while you explore</b><p>Free access is supported by relevant advertising. You can continue discovering profiles after this short placement.</p><button className="btn ghost" onClick={()=>notify("Ad placement is active for free users.")}>Why am I seeing this?</button></div></section> : searchableProfiles.length > 0 && <section className="panel single-profile-panel">
             <div className="eyebrow">Profile</div>
             <div className="discover-photo">
-              {personPhotos.length ? <img src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
+              {personPhotos.length ? <img loading="eager" decoding="async" src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
               {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
             </div>
             <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div></div><span className="score">{person.score||88}%</span></div>
@@ -992,15 +993,51 @@ export default function Home() {
             <div className="profile-tinder-media">
               {myVisualMedia.length>0 ? myVisualMedia.map((x:any,i:number)=>{
                 const src=x.pathname?"/api/profile/media?pathname="+encodeURIComponent(x.pathname):"";
-                return <div className="profile-tinder-thumb" key={x.pathname||i}>{x.kind==="video"?<video muted playsInline preload="metadata" src={src}/>:<img src={src} alt="" />}</div>;
+                return <div className="profile-tinder-thumb" key={x.pathname||i}>{x.kind==="video"?<video muted playsInline preload="metadata" src={src}/>:<img loading="lazy" decoding="async" src={src} alt="" />}</div>;
               }) : <div className="profile-tinder-empty"><span className="top-profile-avatar large">{myProfileInitial}</span><div><b>Add your first profile photo</b><small>Your photos and videos will appear here.</small></div></div>}
             </div>
             <div className="profile-tinder-copy"><div><h2>{user?.profile?.displayName||"Your profile"}</h2><p className="sub">{user?.profile?.city||city}</p></div><p className="profile-bio">{user?.profile?.bio||"Add a short bio so people know what makes you, you."}</p></div>
             <div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
           </div>
+          <div className="panel profile-preview-panel">
+            <div className="eyebrow">Profile preview</div>
+            <h3>👀 How visitors see you</h3>
+            <p className="safe">This preview is visible to you too, so you can check exactly what your profile communicates before others see it.</p>
+            {(Array.isArray(user?.profile?.lifestylePreferences?.personalityPrompts)?user.profile.lifestylePreferences.personalityPrompts:[]).filter((x:any)=>x?.question||x?.answer).map((x:any,i:number)=>(
+              <div className="prompt-card" key={"my-preview-pp-"+i}>
+                <small>PERSONALITY</small><b>{x.question||"About me"}</b><span>{x.answer||""}</span>
+                {Array.isArray(x.media)&&x.media.length>0&&<div className="prompt-package-media">{x.media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>
+                    {m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline controls src={src}/>:m.kind==="voice"&&src?<audio controls preload="none" src={src}/>:null}
+                  </div>;
+                })}</div>}
+              </div>
+            ))}
+            {(Array.isArray(user?.profile?.lifestylePreferences?.partnerPrompts)?user.profile.lifestylePreferences.partnerPrompts:[]).filter((x:any)=>x?.question||x?.answer).map((x:any,i:number)=>(
+              <div className="prompt-card partner-prompt" key={"my-preview-partner-"+i}>
+                <small>WHAT I'M LOOKING FOR</small><b>{x.question||"Partner"}</b><span>{x.answer||""}</span>
+                {Array.isArray(x.media)&&x.media.length>0&&<div className="prompt-package-media">{x.media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>
+                    {m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline controls src={src}/>:m.kind==="voice"&&src?<audio controls preload="none" src={src}/>:null}
+                  </div>;
+                })}</div>}
+              </div>
+            ))}
+            {myShowcase.length>0&&<div className="showcase-preview-list">{myShowcase.map((m:any,i:number)=>{
+              const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+              return <div className="showcase-preview" key={m.pathname||i}>
+                <div className="showcase-thumb">{m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline src={src}/>:m.kind==="voice"&&src?<div className="showcase-audio-thumb">🎙️</div>:<div>•</div>}</div>
+                <div className="showcase-preview-copy"><b>{m.kind==="photo"?"Photo":m.kind==="video"?"Video":"Voice clip"}</b><span>Your profile media</span></div>
+              </div>;
+            })}</div>}
+            {!(myShowcase.length||user?.profile?.lifestylePreferences?.personalityPrompts?.some((x:any)=>x?.question||x?.answer)||user?.profile?.lifestylePreferences?.partnerPrompts?.some((x:any)=>x?.question||x?.answer))&&
+              <div className="profile-tinder-empty"><b>Your preview is ready.</b><small>Add prompts, photos, video or voice clips from Edit profile to make it richer.</small></div>}
+          </div>
           <div className="panel"><b>✨ Profile story</b><p className="safe">Prompts, languages, lifestyle and trust details stay attached to your profile. Edit them anytime.</p></div>
           <div className="panel"><div className="eyebrow">Rewards</div><h3>🎁 Refer & earn</h3><p className="safe">Invite friends to Cuddl. When the referral meets the admin-defined qualifying condition, your reward is credited to your account.</p><div className="actions"><button className="btn" onClick={openReferral}>Open referral & rewards</button></div></div>
-          <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions"><button className="btn ghost" onClick={() => window.location.href="/help"}>❓ Help & Feedback</button><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
+          <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions privacy-actions"><button className="btn ghost" onClick={() => window.location.href="/help"}>❓ Help & Feedback</button><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
           <div className="grid">
             {[
               ["🧭","Relationship Compass","Compare goals, communication and lifestyle preferences."],
@@ -1064,7 +1101,7 @@ export default function Home() {
         <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
         <button className="btn" disabled={freeVerificationStatus==="pending"||!allFreeVerificationCaptured||verificationSubmitting} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"VERIFICATION SUBMITTED":verificationSubmitting?"SUBMITTING…":"SUBMIT VERIFICATION"}</button>
         <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
-        <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
+        <button className="btn ghost" disabled={freeVerificationStatus!=="verified"} onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>{freeVerificationStatus==="verified"?"Close":"Verification is required"}</button>
       </div></div>}
 
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
@@ -1095,7 +1132,6 @@ export default function Home() {
             <div className="profile-field-group"><label>Drinking</label><select className="field" value={profileDraft.drinking||""} onChange={e=>setProfileDraft({...profileDraft,drinking:e.target.value})}><option value="">Select drinking preference</option><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Prefer not to say</option></select></div>
             <div className="profile-field-group"><label>Relationship goal</label><select className="field" value={profileDraft.relationshipGoal||""} onChange={e=>setProfileDraft({...profileDraft,relationshipGoal:e.target.value})}><option value="">Select goal</option>{profileRelationshipGoals.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Education</label><select className="field" value={profileDraft.education||""} onChange={e=>setProfileDraft({...profileDraft,education:e.target.value})}><option value="">Select education level</option>{profileQualifications.map(x=><option key={x}>{x}</option>)}</select></div>
-            <div className="profile-field-group"><label>Qualification</label><select className="field" value={profileDraft.qualification||""} onChange={e=>setProfileDraft({...profileDraft,qualification:e.target.value})}><option value="">Select qualification</option>{profileQualifications.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Children preference</label><select className="field" value={profileDraft.children||""} onChange={e=>setProfileDraft({...profileDraft,children:e.target.value})}><option value="">Select preference</option>{profileChildren.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Pets preference</label><select className="field" value={profileDraft.pets||""} onChange={e=>setProfileDraft({...profileDraft,pets:e.target.value})}><option value="">Select preference</option>{profilePets.map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="profile-field-group"><label>Exercise</label><select className="field" value={profileDraft.exercise||""} onChange={e=>setProfileDraft({...profileDraft,exercise:e.target.value})}><option value="">Select exercise</option><option>Daily</option><option>Often</option><option>Sometimes</option><option>Rarely</option></select></div>
@@ -1212,8 +1248,8 @@ export default function Home() {
       </div></div>}
       {profileOnboarding && onboardingChecked && onboardingPromptOpen && <div className="overlay popup-overlay onboarding-lock"><div className="login-popup profile-modal">
         <div className="eyebrow">Required before Discover</div><h2>Complete your profile first.</h2>
-        <p className="sub">Cuddl will take you to profile search only after these basic details are completed. This prevents browsing other members with an unfinished profile.</p>
-        <div className="verification-list"><div>✓ Profile name</div><div>✓ City & state</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div></div>
+        <p className="sub">Complete your basic profile details first. Identity verification will then be mandatory before you can browse or use Cuddl.</p>
+        <div className="verification-list"><div>✓ Profile name</div><div>✓ City & state</div><div>✓ Gender & discovery preference</div><div>✓ Short bio (minimum 10 characters)</div><div>✓ Marital status</div></div>
         <button className="btn" onClick={openProfileEditor}>Update my profile</button>
       </div></div>}
       {festivalOpen && festival && <div className="overlay"><div className="festival-sheet">
@@ -1227,7 +1263,7 @@ export default function Home() {
       </div></div>}
       {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
-        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile" && id!=="bottle"){setProfileModal("edit");notify("Complete your profile before browsing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
+        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} if(!profileOnboarding && freeVerificationStatus!=="verified" && id!=="profile"){setVerificationOpen(true);notify("Complete identity verification before continuing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
       </nav>
       {toast && <div role="status" style={{position:"fixed",left:"50%",bottom:84,transform:"translateX(-50%)",background:"#282326",color:"#fff",borderRadius:99,padding:"11px 15px",fontSize:12,zIndex:80}}>{toast}</div>}
     </div>
