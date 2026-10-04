@@ -113,6 +113,8 @@ export default function Home() {
   const [cameraAngle, setCameraAngle] = useState<"front"|"left"|"right">("front");
   const [cameraBusy, setCameraBusy] = useState(false);
   const [verificationSubmitting, setVerificationSubmitting] = useState(false);
+  const [verificationResponse,setVerificationResponse]=useState("");
+  const [verificationResponseBusy,setVerificationResponseBusy]=useState(false);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -1144,6 +1146,7 @@ export default function Home() {
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Two-level identity check</div><h2>{freeVerificationStatus==="reverify_required"?"Re-verification required":"Verify with your camera"}</h2>
         <p className="sub">{freeVerificationStatus==="reverify_required"?"Your live selfies did not match your current profile photo closely enough. Capture fresh selfies to retry.":"Cuddl first runs an AI face-match against your profile photo. If it passes, you can continue using Cuddl immediately with an AI Verified tag. Final manual verification is completed by the Cuddl team in the background."}</p>
+        {freeVerificationStatus==="reverify_required" && <div className="panel"><div className="eyebrow">Admin requested information</div><p className="sub">{myVerification.reverificationRequest||"Please provide the information requested by the Cuddl verification team."}</p><textarea className="field" rows={4} value={verificationResponse} onChange={e=>setVerificationResponse(e.target.value)} placeholder="Enter the requested information..." /><button className="btn" disabled={verificationResponseBusy||!verificationResponse.trim()} onClick={async()=>{setVerificationResponseBusy(true);try{const r=await fetch("/api/verification/review-response",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({response:verificationResponse})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not submit response");notify("Information sent to the Cuddl verification team ✓");}catch(e){notify(e instanceof Error?e.message:"Could not submit response");}finally{setVerificationResponseBusy(false);}}}>{verificationResponseBusy?"Sending…":"Send information"}</button></div>}
         <div className="panel" style={{padding:12}}>
           <div className="camera-stage">
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
