@@ -339,7 +339,15 @@ export default function Home() {
     setFestivalOpen(true);
   }
   useEffect(() => { if(!user)return; const t=window.setInterval(()=>{refreshFestival()},10000); return ()=>window.clearInterval(t); }, [user]);
-  useEffect(() => { if(!user)return; const t=window.setInterval(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});const d=await r.json();if(Array.isArray(d.notifications))setNotifications(d.notifications)},30000); return ()=>window.clearInterval(t); }, [user]);
+  useEffect(() => { if(!user)return; const t=window.setInterval(async()=>{
+    try{
+      const [nr,vr]=await Promise.all([fetch("/api/notifications",{cache:"no-store"}),fetch("/api/verification/free",{cache:"no-store"})]);
+      const d=await nr.json(); const v=await vr.json();
+      if(Array.isArray(d.notifications))setNotifications(d.notifications);
+      if(v?.status && v.status!==freeVerificationStatus)setFreeVerificationStatus(v.status);
+      if(v?.status==="reverify_required")setVerificationOpen(true);
+    }catch{}
+  },10000); return ()=>window.clearInterval(t); }, [user,freeVerificationStatus]);
   useEffect(() => { if(!user)return; fetch("/api/discover").then(r=>r.json()).then(d=>{if(Array.isArray(d.profiles))setDiscoverProfiles(d.profiles);}); fetch("/api/matches").then(r=>r.json()).then(d=>{if(Array.isArray(d.matches))setMatches(d.matches);}); }, [user]);
   const passwordChecks = useMemo(() => ({length: authForm.password.length >= 8, upper: /[A-Z]/.test(authForm.password), lower: /[a-z]/.test(authForm.password), number: /[0-9]/.test(authForm.password), special: /[^A-Za-z0-9]/.test(authForm.password)}), [authForm.password]);
   const passwordValid = Object.values(passwordChecks).every(Boolean);
