@@ -8,7 +8,8 @@ export default function AdminPage(){
   const [verifications,setVerifications]=useState<any[]>([]);
   const [refSettings,setRefSettings]=useState<any>({enabled:true,rewardType:"PLAN_EXTENSION",rewardValue:{months:1},qualificationEvent:"PROFILE_COMPLETE",maxRewardsPerUser:20});
   const [offers,setOffers]=useState<any[]>([]);
-  const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});\n  const [planConfig,setPlanConfig]=useState<any>(null);
+  const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});
+  const [planConfig,setPlanConfig]=useState<any>(null);
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
@@ -23,7 +24,8 @@ export default function AdminPage(){
   useEffect(()=>{load()},[]);
 
   async function saveReferralSettings(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/referral",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"settings",...refSettings})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save referral settings");return;}load();}
-  async function savePlanConfig(){const r=await fetch("/api/plan-config",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({config:planConfig})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save plan configuration");return;}setPlanConfig(d.config);setError("");}\n  async function saveOffer(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(offerForm)});const d=await r.json();if(!r.ok){setError(d.error||"Could not save offer");return;}setOfferForm({...offerForm,code:""});load();}
+  async function savePlanConfig(){const r=await fetch("/api/plan-config",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({config:planConfig})});const d=await r.json();if(!r.ok){setError(d.error||"Could not save plan configuration");return;}setPlanConfig(d.config);setError("");}
+  async function saveOffer(e:React.FormEvent){e.preventDefault();const r=await fetch("/api/offers",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(offerForm)});const d=await r.json();if(!r.ok){setError(d.error||"Could not save offer");return;}setOfferForm({...offerForm,code:""});load();}
   async function createFestival(e:React.FormEvent){
     e.preventDefault();setError("");
     const ids=activities.map(a=>a.id);
