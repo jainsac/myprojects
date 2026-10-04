@@ -108,7 +108,7 @@ export default function Home() {
   const [loginPopup, setLoginPopup] = useState<any>(null);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [freeVerificationFiles, setFreeVerificationFiles] = useState<Record<string, File | null>>({front:null,left:null,right:null});
-  const [freeVerificationStatus, setFreeVerificationStatus] = useState<"not_started"|"pending"|"verified">("not_started");
+  const [freeVerificationStatus, setFreeVerificationStatus] = useState<"not_started"|"ai_pending"|"ai_verified"|"reverify_required"|"verified">("not_started");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraAngle, setCameraAngle] = useState<"front"|"left"|"right">("front");
   const [cameraBusy, setCameraBusy] = useState(false);
@@ -279,9 +279,12 @@ export default function Home() {
     setProfileOnboarding(!complete);
     setOnboardingPromptOpen(!complete);
     setOnboardingChecked(true);
-    if(complete && freeVerificationStatus !== "verified") setVerificationOpen(true);
+    fetch("/api/verification/free",{cache:"no-store"}).then(r=>r.json()).then(v=>{
+      const status=v?.status||"not_started";
+      setFreeVerificationStatus(status);
+      if(status==="reverify_required" || (complete && status==="not_started")) setVerificationOpen(true);
+    }).catch(()=>{});
   }, [user]);
-  useEffect(() => { if(!user) return; try { const raw=localStorage.getItem("cuddl_free_verification"); if(raw) setFreeVerificationStatus(JSON.parse(raw).status || "not_started"); } catch {} }, [user]);
   useEffect(() => { if(!user) return; setLocationGranted(!!user?.profile?.lifestylePreferences?.locationGranted); if(typeof Notification!=="undefined") setNotificationPermission(Notification.permission); }, [user]);
   useEffect(() => { if(!user) return; const ping=()=>{fetch("/api/heartbeat",{method:"POST"}).catch(()=>{});}; ping(); const timer=window.setInterval(ping, 5*60*1000); return ()=>window.clearInterval(timer); }, [user]);
 
@@ -759,9 +762,18 @@ export default function Home() {
       }
       const submit=await fetch("/api/verification/free",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({captures:uploaded})});
       const result=await submit.json();
-      if(!submit.ok) throw new Error(result.error||"Could not submit verification");
-      localStorage.setItem("cuddl_free_verification",JSON.stringify({status:"pending",submittedAt:new Date().toISOString(),captures:Object.fromEntries(keys.map(k=>[k,{hash:captures[k].hash,size:captures[k].size,type:captures[k].type}]))}));
-      setFreeVerificationStatus("pending");
+      if(!submit.ok){
+        if(result.status==="reverify_required"){
+          setFreeVerificationStatus("reverify_required");
+          setVerificationOpen(true);
+          setFreeVerificationFiles({front:null,left:null,right:null});
+          stopFreeCamera();
+          notify("AI verification failed. Please capture fresh selfies and try again.");
+          return;
+        }
+        throw new Error(result.error||"Could not submit verification");
+      }
+      setFreeVerificationStatus(result.status==="ai_verified"?"ai_verified":"ai_pending");
       setFreeVerificationFiles({front:null,left:null,right:null});
       stopFreeCamera();
       setVerificationOpen(false);
@@ -794,6 +806,7 @@ export default function Home() {
   const myProfileAvatarSrc=myProfilePhoto?.pathname
     ? "/api/profile/media?pathname="+encodeURIComponent(myProfilePhoto.pathname) : "";
   const myProfileInitial=String(user?.profile?.displayName||"U").slice(0,1).toUpperCase();
+  const myVerification=(user?.profile?.verification||{}) as Record<string,any>;
 
   if (!authChecked) return <div className="cuddl-app"><main className="content"><div className="panel"><b>Loading Cuddl…</b><p className="sub">Checking your secure session.</p></div></main></div>;
   if (!user) return <div className="cuddl-app"><main className="content auth-screen"><div className="brand auth-brand">Cuddl</div><div className="eyebrow">Activity-first social dating</div><h1 className="hero-title">{authMode==="login"?"Welcome back.":"Create your Cuddl account."}</h1><p className="sub">{authMode==="login"?"Meet through activities, games, music and real conversations.":"One real identity per person. Verification is required for trust and safety."}</p><form className="panel auth-form" onSubmit={submitAuth}>
@@ -810,7 +823,7 @@ export default function Home() {
 <input className="field" type="password" minLength={8} placeholder="Password" value={authForm.password} onChange={e=>{setAuthForm({...authForm,password:e.target.value});setAuthError("");}} required autoComplete={authMode==="login"?"current-password":"new-password"} />
 {authMode==="register" && <div className="password-requirements"><div className="password-head"><b>Password requirements</b>{passwordStrength && <span className={"password-strength "+passwordStrength.toLowerCase()}>{passwordStrength}</span>}</div><div className="password-meter"><span style={{width: passwordStrength==="Strong"?"100%":passwordStrength==="Medium"?"66%":passwordStrength==="Weak"?"33%":"0%"}} /></div><div className="password-rules"><div className={passwordChecks.length?"valid":""}>{passwordChecks.length?"✓":"○"} At least 8 characters</div><div className={passwordChecks.upper?"valid":""}>{passwordChecks.upper?"✓":"○"} One uppercase letter (A–Z)</div><div className={passwordChecks.lower?"valid":""}>{passwordChecks.lower?"✓":"○"} One lowercase letter (a–z)</div><div className={passwordChecks.number?"valid":""}>{passwordChecks.number?"✓":"○"} One number (0–9)</div><div className={passwordChecks.special?"valid":""}>{passwordChecks.special?"✓":"○"} One special character (!@#$%^&*)</div></div></div>}
 {authError && <div className="auth-error">{authError}</div>}
-{authMode==="register" && <div className="safe">Identity status starts as <b>Pending</b>. Account access should remain limited until the verification provider confirms the required live selfie and government-ID checks.</div>}
+{authMode==="register" && <div className="safe">After registration, Cuddl runs a first-level AI identity check against your profile photo. If it passes, you can continue using the app while the Cuddl team completes the final manual review.</div>}
 <button className="btn" disabled={authBusy}>{authBusy?"Please wait…":authMode==="login"?"Sign in":"Create account & verify"}</button></form>{authMode==="login" && <button type="button" className="forgot-link" onClick={()=>{setForgotEmail(authForm.email);setForgotOpen(true);}}>Forgot password?</button>}<button className="btn ghost auth-switch" onClick={()=>{setAuthMode(authMode==="login"?"register":"login");setAuthError("");}}>{authMode==="login"?"New to Cuddl? Create an account":"Already have an account? Sign in"}</button></main></div>;
 
   return (
@@ -1033,7 +1046,7 @@ export default function Home() {
               }) : <div className="profile-tinder-empty"><span className="top-profile-avatar large">{myProfileInitial}</span><div><b>Add your first profile photo</b><small>Your photos and videos will appear here.</small></div></div>}
             </div>
             <div className="profile-tinder-copy"><div><h2>{user?.profile?.displayName||"Your profile"}</h2><p className="sub">{user?.profile?.city||city}</p></div><p className="profile-bio">{user?.profile?.bio||"Add a short bio so people know what makes you, you."}</p></div>
-            <div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Identity verified":freeVerificationStatus==="pending"?"Verification pending":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
+            <div className="trust-badges profile-trust-badges">{myVerification.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{myVerification.aiAutoVerified&&myVerification.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}{myVerification.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{myVerification.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{myVerification.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}</div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Cuddl Verified":freeVerificationStatus==="ai_verified"?"✓ AI Verified":freeVerificationStatus==="reverify_required"?"Re-verify identity":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
           </div>
           <div className="panel profile-preview-panel">
             <div className="eyebrow">Profile preview</div>
@@ -1121,8 +1134,8 @@ export default function Home() {
         <button className="btn ghost" onClick={roomOpen.type==="Game"?closeGameRoom:()=>setRoomOpen(null)}>Close</button>
       </div></div>}
       {verificationOpen && <div className="overlay popup-overlay"><div className="login-popup">
-        <div className="eyebrow">Free identity check</div><h2>{freeVerificationStatus==="pending"?"Verification pending":"Verify with your camera"}</h2>
-        <p className="sub">Capture three guided selfie angles. Captures are uploaded to private temporary storage for review. They are deleted automatically after a final verification decision; this free mode does not perform government-ID authenticity or biometric matching.</p>
+        <div className="eyebrow">Two-level identity check</div><h2>{freeVerificationStatus==="reverify_required"?"Re-verification required":"Verify with your camera"}</h2>
+        <p className="sub">{freeVerificationStatus==="reverify_required"?"Your live selfies did not match your current profile photo closely enough. Capture fresh selfies to retry.":"Cuddl first runs an AI face-match against your profile photo. If it passes, you can continue using Cuddl immediately with an AI Verified tag. Final manual verification is completed by the Cuddl team in the background."}</p>
         <div className="panel" style={{padding:12}}>
           <div className="camera-stage">
           <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:16,background:"#111",display:cameraStream?"block":"none",transform:"scaleX(-1)"}} />
@@ -1131,13 +1144,13 @@ export default function Home() {
         </div>
           
           <canvas ref={cameraCanvasRef} style={{display:"none"}} />
-          <div className="actions">{!cameraStream?<button className="btn" disabled={freeVerificationStatus==="pending"||cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{freeVerificationStatus==="pending"?"Verification submitted ✓":allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Stop camera</button>}</div>
+          <div className="actions">{!cameraStream?<button className="btn" disabled={freeVerificationStatus==="ai_verified"||freeVerificationStatus==="verified"||cameraBusy||allFreeVerificationCaptured} onClick={()=>startFreeCamera(cameraAngle)}>{freeVerificationStatus==="pending"?"Verification submitted ✓":allFreeVerificationCaptured?"All selfies captured ✓":cameraBusy?"Opening camera…":`Start ${cameraAngle} camera`}</button>:<button className="btn" onClick={captureFreeCamera} disabled={freeVerificationStatus==="ai_verified"||freeVerificationStatus==="verified"||allFreeVerificationCaptured}>Capture {cameraAngle}</button>}{cameraStream&&<button className="btn ghost" onClick={stopFreeCamera} disabled={freeVerificationStatus==="pending"||allFreeVerificationCaptured}>Stop camera</button>}</div>
         </div>
         <div className="verification-list">{(["front","left","right"] as const).map(k=><div className="safe" key={k}><b>{k==="front"?"Front":k==="left"?"Left":"Right"} selfie</b> · {freeVerificationFiles[k]?"✓ captured":"not captured"}</div>)}</div>
         <p className="safe">Camera access is permission-based and HTTPS-only; the camera stream is stopped after each capture.</p>
-        <button className="btn" disabled={freeVerificationStatus==="pending"||!allFreeVerificationCaptured||verificationSubmitting} onClick={submitFreeVerification}>{freeVerificationStatus==="pending"?"VERIFICATION SUBMITTED":verificationSubmitting?"SUBMITTING…":"SUBMIT VERIFICATION"}</button>
-        <div className="safe">Status: <b>{freeVerificationStatus.replace("_"," ")}</b></div>
-        <button className="btn ghost" disabled={freeVerificationStatus!=="verified"} onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>{freeVerificationStatus==="verified"?"Close":"Verification is required"}</button>
+        <button className="btn" disabled={(freeVerificationStatus==="ai_verified"||freeVerificationStatus==="verified")||!allFreeVerificationCaptured||verificationSubmitting} onClick={submitFreeVerification}>{verificationSubmitting?"AI CHECKING…":"SUBMIT VERIFICATION"}</button>
+        <div className="safe">Status: <b>{freeVerificationStatus==="ai_verified"?"AI Verified":freeVerificationStatus==="verified"?"Cuddl Verified":freeVerificationStatus==="reverify_required"?"Re-verification required":"Verification ready"}</b></div>
+        <button className="btn ghost" onClick={()=>{stopFreeCamera();setVerificationOpen(false);}}>Close</button>
       </div></div>}
 
       {mediaOpen && <div className="overlay popup-overlay"><div className="login-popup">
@@ -1299,7 +1312,7 @@ export default function Home() {
       </div></div>}
       {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
-        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} if(!profileOnboarding && freeVerificationStatus!=="verified" && id!=="profile"){setVerificationOpen(true);notify("Complete identity verification before continuing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
+        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} if(!profileOnboarding && !["ai_verified","verified","ai_pending"].includes(freeVerificationStatus) && id!=="profile"){setVerificationOpen(true);notify("Complete the AI identity check before continuing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
       </nav>
       {toast && <div role="status" style={{position:"fixed",left:"50%",bottom:84,transform:"translateX(-50%)",background:"#282326",color:"#fff",borderRadius:99,padding:"11px 15px",fontSize:12,zIndex:80}}>{toast}</div>}
     </div>
