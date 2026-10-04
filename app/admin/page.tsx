@@ -11,6 +11,10 @@ export default function AdminPage(){
   const [offerForm,setOfferForm]=useState<any>({code:"",enabled:true,discountType:"PERCENT",discountValue:"10",rewardType:"DISCOUNT",rewardValue:{},applicablePlans:["Plus","Pro","Premium"],maxRedemptions:"",perUserLimit:"1",minPurchase:"0",startsAt:"",endsAt:""});
   const [planConfig,setPlanConfig]=useState<any>(null);
   const [analytics,setAnalytics]=useState<any>(null);
+  const [analyticsRange,setAnalyticsRange]=useState("all");
+  const [analyticsFrom,setAnalyticsFrom]=useState("");
+  const [analyticsTo,setAnalyticsTo]=useState("");
+  const [feedback,setFeedback]=useState<any[]>([]);
   const [error,setError]=useState("");
   const [festivalForm,setFestivalForm]=useState({name:"",slug:"",tagline:"",description:"",city:"Delhi",coverEmoji:"🎉"});
   const [activityForm,setActivityForm]=useState({activityName:"",category:"Festival",description:"",city:"Delhi",capacity:""});
@@ -19,10 +23,11 @@ export default function AdminPage(){
   const [newBundle,setNewBundle]=useState<any>({id:"",name:"",description:"",audience:"ALL",billing:"ONE_TIME",price:199,validityDays:30,items:"super_spark:10,boost:3,pre_match_message:5"});
 
   async function load(){
-    const [f,n,v,o,p,a]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config"),fetch("/api/analytics")]);
-    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json(), pd=await p.json(), ad=await a.json();
+    const analyticsUrl=analyticsRange==="custom"&&analyticsFrom?("/api/analytics?from="+encodeURIComponent(analyticsFrom)+(analyticsTo?"&to="+encodeURIComponent(analyticsTo):"")):("/api/analytics?range="+analyticsRange);
+    const [f,n,v,o,p,a,fb]=await Promise.all([fetch("/api/admin/festival"),fetch("/api/admin/notifications"),fetch("/api/admin/verification"),fetch("/api/offers"),fetch("/api/plan-config"),fetch(analyticsUrl),fetch("/api/feedback")]);
+    const fd=await f.json(), nd=await n.json(), vd=await v.json(), od=await o.json(), pd=await p.json(), ad=await a.json(), fbd=await fb.json();
     if(!f.ok||!n.ok||!v.ok){setError(fd.error||nd.error||vd.error||"Admin access required.");return;}
-    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);if(a.ok)setAnalytics(ad);
+    setFestival(fd.festivals||[]);setActivities(fd.activities||[]);setNotifications(nd.notifications||[]);setVerifications(vd.verifications||[]);setOffers(od.offers||[]);if(p.ok)setPlanConfig(pd);if(a.ok)setAnalytics(ad);if(fb.ok)setFeedback(fbd.feedback||[]);
   }
   useEffect(()=>{load()},[]);
 
@@ -108,7 +113,12 @@ export default function AdminPage(){
       <button className="btn ghost" onClick={()=>{if(!newBundle.id||!newBundle.name)return;const items=newBundle.items.split(",").map((x:string)=>{const [featureKey,quantity]=x.trim().split(":");return {featureKey,quantity:Number(quantity)||1};}).filter((x:any)=>x.featureKey);setPlanConfig((x:any)=>({...x,bundles:[...(x.bundles||[]),{...newBundle,items,audience:[newBundle.audience]}]}));setNewBundle({...newBundle,id:"",name:""});}}>+ Add premium bundle</button>
       <div style={{marginTop:14}}><button className="btn" onClick={savePlanConfig}>Save launch & monetization settings</button></div>
     </section>
-    <section className="panel"><div className="eyebrow">Product analytics</div><h2>Feature usage — lifetime</h2><p className="sub">These lifetime events are the evidence base for deciding what should remain free, become premium, or become an add-on.</p><div className="admin-grid"><div className="safe"><b>{analytics?.totals?.events||0}</b><br/>usage events</div><div className="safe"><b>{analytics?.totals?.users||0}</b><br/>active tracked users</div></div><div style={{overflowX:"auto",marginTop:12}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr><th style={{textAlign:"left",padding:8}}>Feature</th><th style={{textAlign:"left",padding:8}}>Event</th><th style={{textAlign:"right",padding:8}}>Count</th></tr></thead><tbody>{(analytics?.byFeature||[]).map((x:any)=><tr key={x.feature_key+"-"+x.event_name}><td style={{padding:8}}>{x.feature_key}</td><td style={{padding:8}}>{x.event_name}</td><td style={{padding:8,textAlign:"right"}}>{x.count}</td></tr>)}</tbody></table></div></section>
+    <section className="panel"><div className="eyebrow">Product analytics</div><h2>Feature usage</h2><p className="sub">Lifetime data stays stored; this view can be filtered without changing the underlying event history.</p>
+<div className="chips" style={{flexWrap:"wrap"}}>{[["today","Today"],["7d","7 days"],["30d","30 days"],["90d","90 days"],["all","All time"],["custom","Custom"]].map(([v,l])=><button key={v} className={"chip "+(analyticsRange===v?"active":"")} onClick={()=>setAnalyticsRange(v)}>{l}</button>)}</div>
+{analyticsRange==="custom"&&<div className="admin-grid" style={{marginTop:10}}><input className="field" type="date" value={analyticsFrom} onChange={e=>setAnalyticsFrom(e.target.value)}/><input className="field" type="date" value={analyticsTo} onChange={e=>setAnalyticsTo(e.target.value)}/><button className="btn" onClick={load}>Apply range</button></div>}
+<div className="admin-grid"><div className="safe"><b>{analytics?.totals?.events||0}</b><br/>usage events</div><div className="safe"><b>{analytics?.totals?.users||0}</b><br/>active tracked users</div></div>
+<div style={{overflowX:"auto",marginTop:12}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr><th style={{textAlign:"left",padding:8}}>Feature</th><th style={{textAlign:"left",padding:8}}>Event</th><th style={{textAlign:"right",padding:8}}>Count</th></tr></thead><tbody>{(analytics?.byFeature||[]).map((x:any)=><tr key={x.feature_key+"-"+x.event_name}><td style={{padding:8}}>{x.feature_key}</td><td style={{padding:8}}>{x.event_name}</td><td style={{padding:8,textAlign:"right"}}>{x.count}</td></tr>)}</tbody></table></div></section>
+    <section className="panel"><div className="eyebrow">User inbox</div><h2>Help & Feedback</h2><p className="sub">Latest messages from users, with simple status tracking.</p>{feedback.length===0?<p className="safe">No messages yet.</p>:feedback.slice(0,50).map((x:any)=><div className="panel" key={x.id}><div className="admin-row"><div><b>{x.type} · {x.category}</b><div className="sub">{x.subject||"No subject"} · {new Date(x.created_at).toLocaleString()}</div><p className="safe">{x.message}</p></div><select className="field" value={x.status} onChange={async e=>{await fetch("/api/feedback",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:x.id,status:e.target.value})});load();}}><option>OPEN</option><option>IN_REVIEW</option><option>RESOLVED</option><option>CLOSED</option></select></div></div>)}</section>
     <section className="panel"><div className="eyebrow">Growth & rewards</div><h2>Referral program</h2>
       <p className="sub">Define the qualifying event and reward. Rewards are recorded in a ledger for later entitlement/payment integration.</p>
       <form className="admin-form" onSubmit={saveReferralSettings}>
