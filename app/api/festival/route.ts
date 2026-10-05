@@ -10,7 +10,15 @@ export async function GET(){
     const plan=String((current?.profile?.lifestylePreferences as any)?.plan||"BASIC").toUpperCase();
     const paid=plan==="PLUS"||plan==="PRO"||plan==="PREMIUM";
     const db=getDb();
-    const live=await db.select().from(festivals).where(eq(festivals.isLive,true)).limit(1);
+    let live;
+    try {
+      live=await db.select().from(festivals).where(eq(festivals.isLive,true)).limit(1);
+    }catch(error:any){
+      // Festival is an optional module; an older database may not have its tables yet.
+      // Do not let that prevent the main app/API from loading.
+      if(error?.cause?.code==="42P01" || error?.code==="42P01") return NextResponse.json({live:false,festival:null,activities:[]});
+      throw error;
+    }
     if(!live.length) return NextResponse.json({live:false,festival:null,activities:[]});
     const festival=live[0];
     if(!paid) return NextResponse.json({live:true,festival:{id:festival.id,name:festival.name,slug:festival.slug,tagline:festival.tagline,description:festival.description,city:festival.city,coverEmoji:festival.coverEmoji,startsAt:festival.startsAt,endsAt:festival.endsAt},activities:[],locked:true,requiredPlan:"PLUS"});
