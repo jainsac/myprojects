@@ -106,6 +106,9 @@ export async function ensurePlanConfigSchema(){
   if(ready)return ready;
   ready=(async()=>{
     const db=getDb();
+    // Vercel can run multiple instances of this initializer at once.
+    // Serialize the DDL so PostgreSQL cannot race while creating pg_type rows.
+    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('cuddl:plan_config_schema'))`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS plan_config (
       id integer PRIMARY KEY DEFAULT 1,
       config jsonb NOT NULL,
