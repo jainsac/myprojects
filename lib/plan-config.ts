@@ -106,14 +106,18 @@ export async function ensurePlanConfigSchema(){
   if(ready)return ready;
   ready=(async()=>{
     const db=getDb();
-    // Vercel can run multiple instances of this initializer at once.
-    // Serialize the DDL so PostgreSQL cannot race while creating pg_type rows.
-    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('cuddl:plan_config_schema'))`);
-    await db.execute(sql`CREATE TABLE IF NOT EXISTS plan_config (
-      id integer PRIMARY KEY DEFAULT 1,
-      config jsonb NOT NULL,
-      updated_at timestamptz NOT NULL DEFAULT now()
-    )`);
+    // Multiple Vercel instances may initialize this table concurrently. PostgreSQL
+    // can report a pg_type duplicate even though the table creation won the race;
+    // treat that specific error as success and continue with the existing table.
+    try {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS plan_config (
+        id integer PRIMARY KEY DEFAULT 1,
+        config jsonb NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`);
+    } catch (error:any) {
+      if (error?.code !== "23505" || !String(error?.detail || "").includes("(typname, typnamespace)=(plan_config")) throw error;
+    }
     await db.execute(sql`INSERT INTO plan_config(id,config) VALUES(1,${JSON.stringify(DEFAULT_PLAN_CONFIG)}::jsonb)
       ON CONFLICT(id) DO NOTHING`);
   })();
