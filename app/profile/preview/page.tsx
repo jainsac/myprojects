@@ -35,12 +35,17 @@ export default function ProfilePreviewPage(){
   const src=current?"/api/profile/media?pathname="+encodeURIComponent(current.pathname):"";
   const age=profile.dateOfBirth?Math.max(0,new Date().getFullYear()-new Date(profile.dateOfBirth).getFullYear()):null;
   const facts=[
-    ["Work",[lp.profession,lp.company].filter(Boolean).join(" · ")],
+    ["Profession",[lp.profession,lp.company].filter(Boolean).join(" · ")],
     ["Education",lp.education],
-    ["Relationship",lp.relationshipGoal],
-    ["Lifestyle",[lp.foodPreference||lp.food,lp.diet,lp.smoking,lp.drinking].filter(Boolean).join(" · ")],
-    ["Family & pets",[lp.children,lp.pets].filter(Boolean).join(" · ")],
-    ["Background",[lp.religion,lp.community].filter(Boolean).join(" · ")]
+    ["Looking for",lp.relationshipGoal],
+    ["Food preference",lp.foodPreference||lp.food],
+    ["Diet",lp.diet],
+    ["Smoking",lp.smoking],
+    ["Drinking",lp.drinking],
+    ["Children",lp.children],
+    ["Pets",lp.pets],
+    ["Religion",lp.religion],
+    ["Community",lp.community]
   ].filter(x=>x[1]);
 
   return <main className="visitor-preview-page">
