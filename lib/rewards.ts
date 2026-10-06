@@ -102,8 +102,7 @@ export function ensureRewardsSchema(){
         // report the losing CREATE as a pg_type duplicate even though the table
         // now exists. Treat only that specific CREATE TABLE race as success.
         const detail=String(error?.detail||error?.cause?.detail||"");
-        const isCreate=String(statement.queryChunks?.[0]?.value||"").trim().toUpperCase().startsWith("CREATE");
-        if(!(isCreate && error?.code==="23505" && detail.includes("pg_type_typname_nsp_index"))) throw error;
+        if(!(error?.code==="23505" && detail.includes("pg_type_typname_nsp_index"))) throw error;
       }
     }
   })();
