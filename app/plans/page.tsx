@@ -56,7 +56,7 @@ export default function Plans(){
           <div className="safe"><b>{previousPlan?"New benefits":"Included benefits"}:</b> {uniqueFeatures.length} · {previousPlan?"Everything from "+previousPlan+" is included.":"Core Cuddl experience."}</div>
           <button className="btn" onClick={()=>{setSelectedPlan(name);alert(name==="Basic"?"Basic is free.":"Checkout gateway is not connected in this test build.");}}>{name==="Basic"?"Current plan":"Choose "+name}</button>
         </section>;
-      })}}
+      })}
     </div>
   </main>;
 }
