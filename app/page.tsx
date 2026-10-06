@@ -167,6 +167,7 @@ export default function Home() {
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   const [profileMenuOpen,setProfileMenuOpen]=useState(false);
+  const [profileFilterOpen,setProfileFilterOpen]=useState(false);
   const photoTouchStart=useRef<{id:string;x:number}|null>(null);
 
   const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
@@ -879,7 +880,7 @@ export default function Home() {
           <div className="eyebrow">Smart discovery</div>
           <h1 className="hero-title">Find the right people for you.</h1>
           <p className="sub">Browse naturally. Your detailed discovery preferences are available from <b>Profile → Menu → Search & discovery filters</b>.</p>
-          <button className="discovery-filter-trigger" aria-hidden="true" tabIndex={-1} style={{display:"none"}} />
+ 
 
 
 
@@ -1054,6 +1055,27 @@ export default function Home() {
               <span><b>☰ Profile menu</b><small>Search preferences, privacy, help, plans & legal</small></span><strong>›</strong>
             </button>
           </section>
+          {profileFilterOpen && <section className="profile-discovery-filters">
+            <div className="profile-menu-section-head"><div><div className="eyebrow">Discovery preferences</div><h3>Search & discovery filters</h3><p className="sub">Set the kind of people you want to meet. These controls stay inside your Profile menu, not on the Discover home screen.</p></div><button className="btn ghost" onClick={()=>setProfileFilterOpen(false)}>Done</button></div>
+            <div className="filter-section-title">Basics</div>
+            <div className="filter-grid">
+              {filterField("ageMin","Min age")}{filterField("ageMax","Max age")}{filterField("gender","Gender",["MALE","FEMALE","NON_BINARY","OTHER"])}{filterField("city","City")}{filterField("state","State")}{filterField("distance","Within km",["5","10","25","50","100","250"])}
+            </div>
+            <div className="filter-section-title">Work & background</div>
+            <div className="filter-grid">
+              {filterField("company","Company")}{filterField("profession","Profession")}{filterField("religion","Religion")}{filterField("community","Community")}{filterField("education","Education")}{filterField("relationshipGoal","Relationship goal")}
+            </div>
+            <div className="filter-section-title">Lifestyle</div>
+            <div className="filter-grid">
+              {filterField("food","Food preference")}{filterField("diet","Diet",["Vegetarian","Vegan","Eggetarian","Jain","Non-vegetarian","Anything"])}{filterField("smoking","Smoking",["Never","Occasionally","Regularly","Prefer not to say"])}{filterField("drinking","Drinking",["Never","Occasionally","Socially","Regularly","Prefer not to say"])}{filterField("children","Children",["Want children","Have children","Do not want","Open to it"])}{filterField("pets","Pets",["Love pets","Have pets","No pets","Open to pets"])}{filterField("exercise","Exercise",["Daily","Often","Sometimes","Rarely"])}{filterField("language","Language")}
+            </div>
+            <div className="filter-section-title">Physical & trust</div>
+            <div className="filter-grid">
+              {filterField("heightMin","Min height (cm)")}{filterField("heightMax","Max height (cm)")}{filterField("verified","Identity",["yes",""])}{filterField("photos","Photos",["yes",""])}
+            </div>
+            <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
+          </section>}
+
           <div className="grid">
             {[
               ["🧭","Relationship Compass","Compare goals, communication and lifestyle preferences."],
@@ -1070,7 +1092,7 @@ export default function Home() {
       {profileMenuOpen && <div className="overlay popup-overlay" onClick={()=>setProfileMenuOpen(false)}>
         <div className="profile-menu-sheet" onClick={e=>e.stopPropagation()}>
           <div className="profile-menu-head"><div><div className="eyebrow">Profile menu</div><h2>Settings & preferences</h2></div><button className="icon-btn" onClick={()=>setProfileMenuOpen(false)}>×</button></div>
-          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setTab("discover");setTimeout(()=>document.querySelector(".discovery-filter-trigger")?.scrollIntoView({behavior:"smooth",block:"center"}),50)}}><span>🔎<b>Search & discovery filters</b><small>Age, location, lifestyle, preferences & trust</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setTab("profile");setProfileFilterOpen(true);setTimeout(()=>document.querySelector(".profile-discovery-filters")?.scrollIntoView({behavior:"smooth",block:"center"}),80)}}><span>🔎<b>Search & discovery filters</b><small>Age, location, lifestyle, preferences & trust</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setPermissionsOpen(true)}}><span>🔐<b>Permissions</b><small>Location, camera, microphone & notifications</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setProfileModal("privacy")}}><span>🛡️<b>Privacy</b><small>Control how your information is used</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openReferral()}}><span>🎁<b>Refer & earn</b><small>Referral code, sharing and rewards</small></span><strong>›</strong></button>
