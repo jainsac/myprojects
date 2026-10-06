@@ -91,6 +91,14 @@ export async function GET() {
       exercise:(p as any).exercise || "Often",
       language:(p as any).language || "Hindi, English",
       heightCm:(p as any).heightCm || 165,
+      personalityPrompts:(p as any).personalityPrompts || [
+        {question:"I'm happiest when…",answer:"I'm with my family, discovering a new café or planning a spontaneous weekend."},
+        {question:"A perfect Sunday for me is…",answer:"A slow breakfast, a long walk and trying a new place to eat."},
+      ],
+      partnerPrompts:(p as any).partnerPrompts || [
+        {question:"What I value in a partner…",answer:"Kindness, emotional maturity, humour and someone who communicates openly."},
+      ],
+      personalityStickers:(p as any).personalityStickers || ["Music lover","Food explorer","Dog person"],
       verified:true,
     },
   }));
