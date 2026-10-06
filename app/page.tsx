@@ -218,7 +218,20 @@ export default function Home() {
     setRoomBusy(true); try{const r=await fetch("/api/game-rooms?game="+encodeURIComponent(name));const d=await r.json();const active=(d.rooms||[]).find((x:any)=>x.status==="ACTIVE");if(!active)throw new Error("No live room is available right now.");const j=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:active.id,role:"SPECTATOR"})});const jd=await j.json();if(!j.ok)throw new Error(jd.error||"Could not join as spectator.");resetGame();setRoomOpen({type:"Game",icon,name,meta,roomId:jd.room.id,role:"SPECTATOR",status:jd.room.status,state:jd.room.state||{}});notify("Joined as spectator 👀");}catch(e){notify(e instanceof Error?e.message:"No live room available.");}finally{setRoomBusy(false)}
   }
   async function createGameRoom(name:string, icon:string, meta:string){
-    setRoomBusy(true); try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",gameKey:name})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not create room.");resetGame();setRoomOpen({type:"Game",icon,name,meta,roomId:d.room.id,role:d.room.role,status:d.room.status,state:{}});notify("Game room created ✦");}catch(e){notify(e instanceof Error?e.message:"Could not create room.");}finally{setRoomBusy(false)}}
+    setRoomBusy(true);
+    try{
+      const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",gameKey:name})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||"Could not create room.");
+      resetGame();
+      setRoomOpen({type:"Game",icon,name,meta,roomId:d.room.id,role:d.room.role,status:d.room.status,state:{}});
+      notify("Game room created ✦");
+    }catch{
+      resetGame();
+      setRoomOpen({type:"Game",icon,name,meta,roomId:null,role:"HOST",status:"LOCAL",state:{}});
+      notify("Solo game started ✦");
+    }finally{setRoomBusy(false)}
+  }
   async function loadGameRooms(name:string){try{const r=await fetch("/api/game-rooms?game="+encodeURIComponent(name),{cache:"no-store"});const d=await r.json();if(Array.isArray(d.rooms))setAvailableRooms(d.rooms)}catch{}}
   async function joinGameRoom(room:any){setRoomBusy(true);try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:room.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not join room.");resetGame();setRoomOpen({type:"Game",icon:roomOpen?.icon||"🎮",name:room.game_key,meta:"Multiplayer game",roomId:d.room.id,role:d.room.role,status:d.room.status,state:d.room.state||{}});notify("Joined game room 🎮");}catch(e){notify(e instanceof Error?e.message:"Could not join room.");}finally{setRoomBusy(false)}}
   async function updateGameRoom(state:any){if(!roomOpen?.roomId || roomOpen.role==="SPECTATOR")return;await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",roomId:roomOpen.roomId,state})}).catch(()=>{})}
@@ -864,7 +877,62 @@ export default function Home() {
           <h1 className="hero-title">Find the right people for you.</h1>
           <p className="sub">Use as many filters as you like. More meaningful preferences can make discovery more relevant.</p>
 
-          <details className="panel search-panel" open={false}>
+
+
+          {showDiscoveryAd ? <section className="panel discovery-ad-slot"><div className="ad-kicker">ADVERTISEMENT</div><div className="ad-placeholder"><span>Sponsored</span><b>Support Cuddl while you explore</b><p>Free access is supported by relevant advertising. You can continue discovering profiles after this short placement.</p><button className="btn ghost" onClick={()=>notify("Ad placement is active for free users.")}>Why am I seeing this?</button></div></section> : searchableProfiles.length > 0 && <section className="panel single-profile-panel">
+            <div className="eyebrow">Profile</div>
+            <div className="discover-photo">
+              {personPhotos.length ? <img loading="eager" decoding="async" src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
+              {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
+            </div>
+            <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div><div className="trust-badges">{person.verification?.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{person.verification?.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{person.verification?.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{person.verification?.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}{person.verification?.aiAutoVerified&&person.verification?.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}</div></div><span className="score">{person.score||88}%</span></div>
+            <p className="profile-bio">{person.bio || "No bio added yet."}</p>
+            {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
+              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
+              return <div className="prompt-card prompt-package" key={"personality-"+i}>
+                <small>ABOUT ME · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
+                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
+                })}</div>}
+              </div>
+            })}
+            {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
+              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
+              return <div className="prompt-card partner-prompt prompt-package" key={"partner-"+i}>
+                <small>WHAT I VALUE IN A PARTNER · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
+                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
+                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
+                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
+                })}</div>}
+              </div>
+            })}
+            {Array.isArray(person.lifestylePreferences?.profileShowcase)&&person.lifestylePreferences.profileShowcase.slice(0,3).map((x:any,i:number)=>{
+              const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
+              return <div className="showcase-card" key={"showcase-"+i}>
+                <div className="showcase-label">{x.kind==="photo"?"📸 PHOTO PROMPT":x.kind==="voice"?"🎙️ VOICE PROMPT":"🎥 VIDEO PROMPT"}</div>
+                {x.kind==="photo"&&src?<img src={src} alt="Profile showcase"/>:x.kind==="voice"&&src?<audio controls preload="metadata" src={src}/>:x.kind==="video"&&src?<video controls playsInline preload="metadata" src={src}/>:null}
+                {x.prompt&&<span>{x.prompt}</span>}
+              </div>
+            })}
+            {Array.isArray(person.lifestylePreferences?.personalityStickers)&&person.lifestylePreferences.personalityStickers.length>0&&<div className="showcase-stickers">{person.lifestylePreferences.personalityStickers.slice(0,8).map((s:string)=><span className="personality-sticker" key={s}>{s}</span>)}</div>}
+            <div className="profile-facts">
+              <div><b>Work</b><span>{person.lifestylePreferences?.profession||"—"}{person.lifestylePreferences?.company ? " · "+person.lifestylePreferences.company : ""}</span></div>
+              <div><b>Education</b><span>{person.lifestylePreferences?.education||"—"}</span></div>
+              <div><b>Relationship</b><span>{person.lifestylePreferences?.relationshipGoal||"—"}</span></div>
+              <div><b>Lifestyle</b><span>{[person.lifestylePreferences?.foodPreference||person.lifestylePreferences?.food,person.lifestylePreferences?.diet,person.lifestylePreferences?.smoking,person.lifestylePreferences?.drinking].filter(Boolean).join(" · ")||"—"}</span></div>
+              <div><b>Family & pets</b><span>{[person.lifestylePreferences?.children,person.lifestylePreferences?.pets].filter(Boolean).join(" · ")||"—"}</span></div>
+              <div><b>Background</b><span>{[person.lifestylePreferences?.religion,person.lifestylePreferences?.community].filter(Boolean).join(" · ")||"—"}</span></div>
+            </div>
+            <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
+            <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
+          </section>}
+
+          <section className="discovery-filter-section">
+            <div className="eyebrow">Discovery preferences</div>
+            <h3>Refine who you meet</h3>
+            <p className="sub">Filters stay here so the profile remains the focus. Open this section only when you want to narrow discovery.</p>
+          <details className="search-panel" open={false}>
             <div className="search-panel-head"><div><div className="eyebrow">Search & filters</div><b>Refine your discovery</b></div><span className="safe">{searchableProfiles.length} profiles</span></div>
             <div className="filter-section-title">Basics</div>
             <div className="filter-grid">
@@ -904,61 +972,7 @@ export default function Home() {
             </div>
             <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
           </details>
-
-          {showDiscoveryAd ? <section className="panel discovery-ad-slot"><div className="ad-kicker">ADVERTISEMENT</div><div className="ad-placeholder"><span>Sponsored</span><b>Support Cuddl while you explore</b><p>Free access is supported by relevant advertising. You can continue discovering profiles after this short placement.</p><button className="btn ghost" onClick={()=>notify("Ad placement is active for free users.")}>Why am I seeing this?</button></div></section> : searchableProfiles.length > 0 && <section className="panel single-profile-panel">
-            <div className="eyebrow">Profile</div>
-            <div className="discover-photo">
-              {personPhotos.length ? <img loading="eager" decoding="async" src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
-              {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
-            </div>
-            <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div><div className="trust-badges">{person.verification?.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{person.verification?.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{person.verification?.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{person.verification?.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}{person.verification?.aiAutoVerified&&person.verification?.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}</div></div><span className="score">{person.score||88}%</span></div>
-            <p className="profile-bio">{person.bio || "No bio added yet."}</p>
-            {Array.isArray(person.lifestylePreferences?.personalityPrompts)&&person.lifestylePreferences.personalityPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
-              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
-              return <div className="prompt-card prompt-package" key={"personality-"+i}>
-                <small>ABOUT ME · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
-                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
-                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
-                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
-                })}</div>}
-              </div>
-            })}
-            {Array.isArray(person.lifestylePreferences?.partnerPrompts)&&person.lifestylePreferences.partnerPrompts.filter((x:any)=>x?.answer).slice(0,3).map((x:any,i:number)=>{
-              const media=Array.isArray(x.media)?x.media:(x.media?.pathname?[x.media]:[]);
-              return <div className="prompt-card partner-prompt prompt-package" key={"partner-"+i}>
-                <small>WHAT I VALUE IN A PARTNER · PROMPT STORY</small><b>{x.question}</b><span>{x.answer}</span>
-                {media.length>0&&<div className="prompt-package-media">{media.map((m:any,j:number)=>{
-                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
-                  return <div className="prompt-package-item" key={m.pathname||j}>{m.kind==="photo"?<img src={src} alt="Prompt story"/>:m.kind==="video"?<video controls playsInline preload="metadata" src={src}/>:<audio controls preload="metadata" src={src}/>}</div>
-                })}</div>}
-              </div>
-            })}
-            {Array.isArray(person.lifestylePreferences?.profileShowcase)&&person.lifestylePreferences.profileShowcase.slice(0,3).map((x:any,i:number)=>{
-              const src=x.pathname?`/api/profile/media?pathname=${encodeURIComponent(x.pathname)}`:"";
-              return <div className="showcase-card" key={"showcase-"+i}>
-                <div className="showcase-label">{x.kind==="photo"?"📸 PHOTO PROMPT":x.kind==="voice"?"🎙️ VOICE PROMPT":"🎥 VIDEO PROMPT"}</div>
-                {x.kind==="photo"&&src?<img src={src} alt="Profile showcase"/>:x.kind==="voice"&&src?<audio controls preload="metadata" src={src}/>:x.kind==="video"&&src?<video controls playsInline preload="metadata" src={src}/>:null}
-                {x.prompt&&<span>{x.prompt}</span>}
-              </div>
-            })}
-            {Array.isArray(person.lifestylePreferences?.personalityStickers)&&person.lifestylePreferences.personalityStickers.length>0&&<div className="showcase-stickers">{person.lifestylePreferences.personalityStickers.slice(0,8).map((s:string)=><span className="personality-sticker" key={s}>{s}</span>)}</div>}
-            <div className="detail-grid">
-              <div><small>Company</small><b>{person.lifestylePreferences?.company||"—"}</b></div>
-              <div><small>Profession</small><b>{person.lifestylePreferences?.profession||"—"}</b></div>
-              <div><small>Religion</small><b>{person.lifestylePreferences?.religion||"—"}</b></div>
-              <div><small>Community</small><b>{person.lifestylePreferences?.community||"—"}</b></div>
-              <div><small>Food</small><b>{person.lifestylePreferences?.foodPreference||person.lifestylePreferences?.food||"—"}</b></div>
-              <div><small>Diet</small><b>{person.lifestylePreferences?.diet||"—"}</b></div>
-              <div><small>Relationship goal</small><b>{person.lifestylePreferences?.relationshipGoal||"—"}</b></div>
-              <div><small>Education</small><b>{person.lifestylePreferences?.education||"—"}</b></div>
-              <div><small>Children</small><b>{person.lifestylePreferences?.children||"—"}</b></div>
-              <div><small>Pets</small><b>{person.lifestylePreferences?.pets||"—"}</b></div>
-              <div><small>Smoking</small><b>{person.lifestylePreferences?.smoking||"—"}</b></div>
-              <div><small>Drinking</small><b>{person.lifestylePreferences?.drinking||"—"}</b></div>
-            </div>
-            <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
-            <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
-          </section>}
+          </section>
 
           {!searchableProfiles.length && <div className="panel"><b>No profiles match these filters.</b><p className="sub">Try widening age, distance, city or lifestyle preferences.</p><button className="btn ghost" onClick={clearSearchFilters}>Clear filters</button></div>}
         </>}
@@ -1056,44 +1070,17 @@ export default function Home() {
               }) : <div className="profile-tinder-empty"><span className="top-profile-avatar large">{myProfileInitial}</span><div><b>Add your first profile photo</b><small>Your photos and videos will appear here.</small></div></div>}
             </div>
             <div className="profile-tinder-copy"><div><h2>{user?.profile?.displayName||"Your profile"}</h2><p className="sub">{user?.profile?.city||city}</p></div><p className="profile-bio">{user?.profile?.bio||"Add a short bio so people know what makes you, you."}</p></div>
-            <div className="trust-badges profile-trust-badges">{myVerification.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{myVerification.aiAutoVerified&&myVerification.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}{myVerification.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{myVerification.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{myVerification.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}</div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Cuddl Verified":freeVerificationStatus==="ai_verified"?"✓ AI Verified":freeVerificationStatus==="reverify_required"?"Re-verify identity":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
+            <div className="trust-badges profile-trust-badges">{myVerification.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{myVerification.aiAutoVerified&&myVerification.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}{myVerification.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{myVerification.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{myVerification.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}</div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Cuddl Verified":freeVerificationStatus==="ai_verified"?"✓ AI Verified":freeVerificationStatus==="reverify_required"?"Re-verify identity":"Verify identity"}</button><button className="btn ghost" onClick={()=>window.location.href="/profile/preview"}>👀 Preview</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
           </div>
-          <div className="panel profile-preview-panel">
-            <div className="eyebrow">Profile preview</div>
-            <h3>👀 How visitors see you</h3>
-            <p className="safe">This preview is visible to you too, so you can check exactly what your profile communicates before others see it.</p>
-            {(Array.isArray(user?.profile?.lifestylePreferences?.personalityPrompts)?user.profile.lifestylePreferences.personalityPrompts:[]).filter((x:any)=>x?.question||x?.answer).map((x:any,i:number)=>(
-              <div className="prompt-card" key={"my-preview-pp-"+i}>
-                <small>PERSONALITY</small><b>{x.question||"About me"}</b><span>{x.answer||""}</span>
-                {Array.isArray(x.media)&&x.media.length>0&&<div className="prompt-package-media">{x.media.map((m:any,j:number)=>{
-                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
-                  return <div className="prompt-package-item" key={m.pathname||j}>
-                    {m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline controls src={src}/>:m.kind==="voice"&&src?<audio controls preload="none" src={src}/>:null}
-                  </div>;
-                })}</div>}
-              </div>
-            ))}
-            {(Array.isArray(user?.profile?.lifestylePreferences?.partnerPrompts)?user.profile.lifestylePreferences.partnerPrompts:[]).filter((x:any)=>x?.question||x?.answer).map((x:any,i:number)=>(
-              <div className="prompt-card partner-prompt" key={"my-preview-partner-"+i}>
-                <small>WHAT I'M LOOKING FOR</small><b>{x.question||"Partner"}</b><span>{x.answer||""}</span>
-                {Array.isArray(x.media)&&x.media.length>0&&<div className="prompt-package-media">{x.media.map((m:any,j:number)=>{
-                  const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
-                  return <div className="prompt-package-item" key={m.pathname||j}>
-                    {m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline controls src={src}/>:m.kind==="voice"&&src?<audio controls preload="none" src={src}/>:null}
-                  </div>;
-                })}</div>}
-              </div>
-            ))}
-            {myShowcase.length>0&&<div className="showcase-preview-list">{myShowcase.map((m:any,i:number)=>{
-              const src=m.pathname?"/api/profile/media?pathname="+encodeURIComponent(m.pathname):"";
-              return <div className="showcase-preview" key={m.pathname||i}>
-                <div className="showcase-thumb">{m.kind==="photo"&&src?<img loading="lazy" decoding="async" src={src} alt="" />:m.kind==="video"&&src?<video preload="metadata" playsInline src={src}/>:m.kind==="voice"&&src?<div className="showcase-audio-thumb">🎙️</div>:<div>•</div>}</div>
-                <div className="showcase-preview-copy"><b>{m.kind==="photo"?"Photo":m.kind==="video"?"Video":"Voice clip"}</b><span>Your profile media</span></div>
-              </div>;
-            })}</div>}
-            {!(myShowcase.length||user?.profile?.lifestylePreferences?.personalityPrompts?.some((x:any)=>x?.question||x?.answer)||user?.profile?.lifestylePreferences?.partnerPrompts?.some((x:any)=>x?.question||x?.answer))&&
-              <div className="profile-tinder-empty"><b>Your preview is ready.</b><small>Add prompts, photos, video or voice clips from Edit profile to make it richer.</small></div>}
-          </div>
+          <section className="profile-preview-entry">
+            <div>
+              <div className="eyebrow">Profile preview</div>
+              <h3>See your profile as a visitor</h3>
+              <p className="sub">Open a clean, separate preview that uses the same profile presentation other Cuddl members see.</p>
+            </div>
+            <button className="btn" onClick={()=>window.location.href="/profile/preview"}>Preview profile →</button>
+          </section>
+
           <div className="panel"><b>✨ Profile story</b><p className="safe">Prompts, languages, lifestyle and trust details stay attached to your profile. Edit them anytime.</p></div>
           <div className="panel"><div className="eyebrow">Rewards</div><h3>🎁 Refer & earn</h3><p className="safe">Invite friends to Cuddl. When the referral meets the admin-defined qualifying condition, your reward is credited to your account.</p><div className="actions"><button className="btn" onClick={openReferral}>Open referral & rewards</button></div></div>
           <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions privacy-actions"><button className="btn ghost" onClick={() => window.location.href="/help"}>❓ Help & Feedback</button><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
