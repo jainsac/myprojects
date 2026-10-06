@@ -23,7 +23,8 @@ export default function Plans(){
 
   if(!config)return <main className="policy-page"><a href="/" className="policy-back">← Back to Cuddl</a><div className="eyebrow">Cuddl plans</div><h1>Plans & Premium</h1><p className="sub">Loading current plan configuration…</p></main>;
 
-  const plans=Object.entries(config.plans);
+  const planOrder=["Basic","Plus","Pro","Premium"];
+  const plans=planOrder.filter(name=>config.plans[name]).map(name=>[name,config.plans[name]] as [string,Config["plans"][string]]);
   const periods=["Monthly","Quarterly","Half-year","Annual"];
   const actionPriority=(plan:string)=>plan==="Premium"?"Premium → Pro → Plus → Basic":plan==="Pro"?"Pro → Plus → Basic":plan==="Plus"?"Plus → Basic":"Basic";
 
@@ -41,16 +42,21 @@ export default function Plans(){
     </section>
     {config.launchMode==="FREE_ALL"&&<section className="panel" style={{marginBottom:18}}><div className="eyebrow">Launch testing</div><h2>🎉 Everything is free right now</h2><p className="sub">During the Cuddl testing phase, every user gets access to all premium-level features. This helps us test scale, engagement and feature usage before monetization is switched on.</p></section>}
     <div className="plan-grid">
-      {plans.map(([name,plan])=>{
-        const features=config.features.filter(f=>f.plans.includes(name));
+      {plans.map(([name,plan],planIndex)=>{
+        const previousPlan=planIndex>0?plans[planIndex-1][0]:null;
+        const priorNames=plans.slice(0,planIndex).map(([n])=>n);
+        const uniqueFeatures=config.features.filter(f=>f.plans.includes(name)&&!f.plans.some(p=>priorNames.includes(p)));
         return <section className={"plan-card "+(name==="Pro"?"plan-highlight":"")} key={name}>
           <div className="eyebrow">{name}</div><h2>{plan.tag||name}</h2><p>{plan.copy||""}</p>
           <div className="plan-prices">{periods.filter(p=>plan.prices[p]!==undefined).map(p=><div key={p}><span>{p}</span><b>₹{Number(plan.prices[p]).toLocaleString("en-IN")}</b></div>)}</div>
-          <ul className="plan-benefits">{features.map(f=><li key={f.key}>✓ {f.name}</li>)}</ul>
-          <div className="safe"><b>Included features:</b> {features.length}. <b>Action priority:</b> {actionPriority(name)}.</div>
+          <ul className="plan-benefits">
+            {previousPlan&&<li className="plan-inherited">✓ Everything included in {previousPlan}</li>}
+            {uniqueFeatures.map(f=><li key={f.key}>✓ {f.name}</li>)}
+          </ul>
+          <div className="safe"><b>{previousPlan?"New benefits":"Included benefits"}:</b> {uniqueFeatures.length} · {previousPlan?"Everything from "+previousPlan+" is included.":"Core Cuddl experience."}</div>
           <button className="btn" onClick={()=>{setSelectedPlan(name);alert(name==="Basic"?"Basic is free.":"Checkout gateway is not connected in this test build.");}}>{name==="Basic"?"Current plan":"Choose "+name}</button>
         </section>;
-      })}
+      })}}
     </div>
   </main>;
 }
