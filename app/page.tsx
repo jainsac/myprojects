@@ -166,6 +166,9 @@ export default function Home() {
   const [roomBusy, setRoomBusy] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
+  const [profileMenuOpen,setProfileMenuOpen]=useState(false);
+  const photoTouchStart=useRef<{id:string;x:number}|null>(null);
+
   const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
   const [promptRecordingTarget, setPromptRecordingTarget] = useState<{group:"personality"|"partner";index:number}|null>(null);
   const [showcaseBusy, setShowcaseBusy] = useState(false);
@@ -875,15 +878,21 @@ export default function Home() {
         {tab === "discover" && <>
           <div className="eyebrow">Smart discovery</div>
           <h1 className="hero-title">Find the right people for you.</h1>
-          <p className="sub">Use as many filters as you like. More meaningful preferences can make discovery more relevant.</p>
+          <p className="sub">Browse naturally. Your detailed discovery preferences are available from <b>Profile → Menu → Search & discovery filters</b>.</p>
+          <button className="discovery-filter-trigger" aria-hidden="true" tabIndex={-1} style={{display:"none"}} />
 
 
 
           {showDiscoveryAd ? <section className="panel discovery-ad-slot"><div className="ad-kicker">ADVERTISEMENT</div><div className="ad-placeholder"><span>Sponsored</span><b>Support Cuddl while you explore</b><p>Free access is supported by relevant advertising. You can continue discovering profiles after this short placement.</p><button className="btn ghost" onClick={()=>notify("Ad placement is active for free users.")}>Why am I seeing this?</button></div></section> : searchableProfiles.length > 0 && <section className="panel single-profile-panel">
             <div className="eyebrow">Profile</div>
-            <div className="discover-photo">
-              {personPhotos.length ? <img loading="eager" decoding="async" src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} /> : <div className="discover-avatar">{person.initial}</div>}
-              {personPhotos.length>1 && <><button className="photo-arrow left" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,-1)} aria-label="Previous photo">‹</button><button className="photo-arrow right" onClick={()=>changePhoto(person.id||person.name,personPhotos.length,1)} aria-label="Next photo">›</button><span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length} photos</span></>}
+            <div className="discover-photo"
+              onTouchStart={e=>{if(personPhotos.length>1)photoTouchStart.current={id:String(person.id||person.name),x:e.touches[0].clientX}}}
+              onTouchEnd={e=>{const st=photoTouchStart.current;if(!st)return;photoTouchStart.current=null;const dx=e.changedTouches[0].clientX-st.x;if(Math.abs(dx)>45)changePhoto(st.id,personPhotos.length,dx<0?1:-1)}}
+              onPointerDown={e=>{if(personPhotos.length>1)photoTouchStart.current={id:String(person.id||person.name),x:e.clientX}}}
+              onPointerUp={e=>{const st=photoTouchStart.current;if(!st)return;photoTouchStart.current=null;const dx=e.clientX-st.x;if(Math.abs(dx)>45)changePhoto(st.id,personPhotos.length,dx<0?1:-1)}}
+            >
+              {personPhotos.length ? <img loading="eager" decoding="async" src={personPhotos[photoIndexes[person.id]||0]} alt={person.displayName||person.name||"Cuddl profile"} draggable={false}/> : <div className="discover-avatar">{person.initial}</div>}
+              {personPhotos.length>1 && <span className="photo-count">{(photoIndexes[person.id||person.name]||0)+1}/{personPhotos.length}</span>}
             </div>
             <div className="profile-row profile-heading"><div className="grow"><h2 style={{margin:"4px 0"}}>{person.displayName ?? person.name}{person.age ? `, ${person.age}` : ""} ✓</h2><div className="sub">⌖ {person.city || "Location hidden"} · {person.activeNow ? <span className="active-now"><span className="active-dot"/>Active now</span> : "Recently active"}</div><div className="trust-badges">{person.verification?.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{person.verification?.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{person.verification?.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{person.verification?.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}{person.verification?.aiAutoVerified&&person.verification?.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}</div></div><span className="score">{person.score||88}%</span></div>
             <p className="profile-bio">{person.bio || "No bio added yet."}</p>
@@ -917,62 +926,21 @@ export default function Home() {
             })}
             {Array.isArray(person.lifestylePreferences?.personalityStickers)&&person.lifestylePreferences.personalityStickers.length>0&&<div className="showcase-stickers">{person.lifestylePreferences.personalityStickers.slice(0,8).map((s:string)=><span className="personality-sticker" key={s}>{s}</span>)}</div>}
             <div className="profile-facts">
-              <div><b>Work</b><span>{person.lifestylePreferences?.profession||"—"}{person.lifestylePreferences?.company ? " · "+person.lifestylePreferences.company : ""}</span></div>
-              <div><b>Education</b><span>{person.lifestylePreferences?.education||"—"}</span></div>
-              <div><b>Relationship</b><span>{person.lifestylePreferences?.relationshipGoal||"—"}</span></div>
-              <div><b>Lifestyle</b><span>{[person.lifestylePreferences?.foodPreference||person.lifestylePreferences?.food,person.lifestylePreferences?.diet,person.lifestylePreferences?.smoking,person.lifestylePreferences?.drinking].filter(Boolean).join(" · ")||"—"}</span></div>
-              <div><b>Family & pets</b><span>{[person.lifestylePreferences?.children,person.lifestylePreferences?.pets].filter(Boolean).join(" · ")||"—"}</span></div>
-              <div><b>Background</b><span>{[person.lifestylePreferences?.religion,person.lifestylePreferences?.community].filter(Boolean).join(" · ")||"—"}</span></div>
+              {person.lifestylePreferences?.profession&&<div><b>Profession</b><span>{person.lifestylePreferences.profession}{person.lifestylePreferences?.company?" · "+person.lifestylePreferences.company:""}</span></div>}
+              {person.lifestylePreferences?.education&&<div><b>Education</b><span>{person.lifestylePreferences.education}</span></div>}
+              {person.lifestylePreferences?.relationshipGoal&&<div><b>Looking for</b><span>{person.lifestylePreferences.relationshipGoal}</span></div>}
+              {person.lifestylePreferences?.foodPreference&&<div><b>Food preference</b><span>{person.lifestylePreferences.foodPreference}</span></div>}
+              {person.lifestylePreferences?.diet&&<div><b>Diet</b><span>{person.lifestylePreferences.diet}</span></div>}
+              {person.lifestylePreferences?.smoking&&<div><b>Smoking</b><span>{person.lifestylePreferences.smoking}</span></div>}
+              {person.lifestylePreferences?.drinking&&<div><b>Drinking</b><span>{person.lifestylePreferences.drinking}</span></div>}
+              {person.lifestylePreferences?.children&&<div><b>Children</b><span>{person.lifestylePreferences.children}</span></div>}
+              {person.lifestylePreferences?.pets&&<div><b>Pets</b><span>{person.lifestylePreferences.pets}</span></div>}
+              {person.lifestylePreferences?.religion&&<div><b>Religion</b><span>{person.lifestylePreferences.religion}</span></div>}
+              {person.lifestylePreferences?.community&&<div><b>Community</b><span>{person.lifestylePreferences.community}</span></div>}
             </div>
             <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
             <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
           </section>}
-
-          <section className="discovery-filter-section">
-            <div className="eyebrow">Discovery preferences</div>
-            <h3>Refine who you meet</h3>
-            <p className="sub">Filters stay here so the profile remains the focus. Open this section only when you want to narrow discovery.</p>
-          <details className="search-panel" open={false}>
-            <div className="search-panel-head"><div><div className="eyebrow">Search & filters</div><b>Refine your discovery</b></div><span className="safe">{searchableProfiles.length} profiles</span></div>
-            <div className="filter-section-title">Basics</div>
-            <div className="filter-grid">
-              {filterField("ageMin","Min age")}
-              {filterField("ageMax","Max age")}
-              {filterField("gender","Gender",["MALE","FEMALE","NON_BINARY","OTHER"])}
-              {filterField("city","City")}
-              {filterField("state","State")}
-              {filterField("distance","Within km",["5","10","25","50","100","250"])}
-            </div>
-            <div className="filter-section-title">Work & background</div>
-            <div className="filter-grid">
-              {filterField("company","Company")}
-              {filterField("profession","Profession")}
-              {filterField("religion","Religion")}
-              {filterField("community","Community")}
-              {filterField("education","Education")}
-              {filterField("relationshipGoal","Relationship goal")}
-            </div>
-            <div className="filter-section-title">Lifestyle</div>
-            <div className="filter-grid">
-              {filterField("food","Food preference")}
-              {filterField("diet","Diet",["Vegetarian","Vegan","Eggetarian","Jain","Non-vegetarian","Anything"])}
-              {filterField("smoking","Smoking",["Never","Occasionally","Regularly","Prefer not to say"])}
-              {filterField("drinking","Drinking",["Never","Occasionally","Socially","Regularly","Prefer not to say"])}
-              {filterField("children","Children",["Want children","Have children","Do not want","Open to it"])}
-              {filterField("pets","Pets",["Love pets","Have pets","No pets","Open to pets"])}
-              {filterField("exercise","Exercise",["Daily","Often","Sometimes","Rarely"])}
-              {filterField("language","Language")}
-            </div>
-            <div className="filter-section-title">Physical & trust</div>
-            <div className="filter-grid">
-              {filterField("heightMin","Min height (cm)")}
-              {filterField("heightMax","Max height (cm)")}
-              {filterField("verified","Identity",["yes",""])}
-              {filterField("photos","Photos",["yes",""])}
-            </div>
-            <div className="actions"><button className="btn ghost" onClick={clearSearchFilters}>Clear all</button><span className="safe">Filters apply instantly</span></div>
-          </details>
-          </section>
 
           {!searchableProfiles.length && <div className="panel"><b>No profiles match these filters.</b><p className="sub">Try widening age, distance, city or lifestyle preferences.</p><button className="btn ghost" onClick={clearSearchFilters}>Clear filters</button></div>}
         </>}
@@ -1061,7 +1029,7 @@ export default function Home() {
 
         {tab === "profile" && <>
           <div className="eyebrow">Your profile · {city}</div>
-          <h1 className="hero-title">This is how people meet you.</h1>
+          <h1 className="hero-title">This is how people meet you.</h1><button className="profile-menu-inline" onClick={()=>setProfileMenuOpen(true)}>☰ Menu</button>
           <div className="panel profile-tinder-card">
             <div className="profile-tinder-media">
               {myVisualMedia.length>0 ? myVisualMedia.map((x:any,i:number)=>{
@@ -1081,9 +1049,11 @@ export default function Home() {
             <button className="btn" onClick={()=>window.location.href="/profile/preview"}>Preview profile →</button>
           </section>
 
-          <div className="panel"><b>✨ Profile story</b><p className="safe">Prompts, languages, lifestyle and trust details stay attached to your profile. Edit them anytime.</p></div>
-          <div className="panel"><div className="eyebrow">Rewards</div><h3>🎁 Refer & earn</h3><p className="safe">Invite friends to Cuddl. When the referral meets the admin-defined qualifying condition, your reward is credited to your account.</p><div className="actions"><button className="btn" onClick={openReferral}>Open referral & rewards</button></div></div>
-          <div className="panel"><b>Privacy, permissions & legal</b><p className="safe">Location for discovery, contextual camera/microphone access, notifications, privacy controls and the policies that govern Cuddl.</p><div className="actions privacy-actions"><button className="btn ghost" onClick={() => window.location.href="/help"}>❓ Help & Feedback</button><button className="btn ghost" onClick={() => setPermissionsOpen(true)}>Permissions</button><button className="btn ghost" onClick={() => setProfileModal("privacy")}>Manage privacy</button><button className="btn ghost" onClick={() => openLegal("/plans")}>Plans & Premium</button></div><div className="actions"><button className="btn ghost" onClick={() => openLegal("/privacy")}>Privacy Policy</button><button className="btn ghost" onClick={() => openLegal("/terms")}>Terms</button><button className="btn ghost" onClick={() => openLegal("/disclaimer")}>Disclaimer</button><button className="btn ghost" onClick={() => openLegal("/legal-resolution")}>Legal resolution</button></div></div>
+          <section className="profile-tools">
+            <button className="profile-menu-trigger" onClick={()=>setProfileMenuOpen(true)}>
+              <span><b>☰ Profile menu</b><small>Search preferences, privacy, help, plans & legal</small></span><strong>›</strong>
+            </button>
+          </section>
           <div className="grid">
             {[
               ["🧭","Relationship Compass","Compare goals, communication and lifestyle preferences."],
@@ -1097,6 +1067,22 @@ export default function Home() {
         </>}
       </main>
 
+      {profileMenuOpen && <div className="overlay popup-overlay" onClick={()=>setProfileMenuOpen(false)}>
+        <div className="profile-menu-sheet" onClick={e=>e.stopPropagation()}>
+          <div className="profile-menu-head"><div><div className="eyebrow">Profile menu</div><h2>Settings & preferences</h2></div><button className="icon-btn" onClick={()=>setProfileMenuOpen(false)}>×</button></div>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setTab("discover");setTimeout(()=>document.querySelector(".discovery-filter-trigger")?.scrollIntoView({behavior:"smooth",block:"center"}),50)}}><span>🔎<b>Search & discovery filters</b><small>Age, location, lifestyle, preferences & trust</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setPermissionsOpen(true)}}><span>🔐<b>Permissions</b><small>Location, camera, microphone & notifications</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setProfileModal("privacy")}}><span>🛡️<b>Privacy</b><small>Control how your information is used</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openReferral()}}><span>🎁<b>Refer & earn</b><small>Referral code, sharing and rewards</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openLegal("/plans")}}><span>💎<b>Plans & Premium</b><small>Plans, pricing and offers</small></span><strong>›</strong></button>
+          <div className="menu-divider"/>
+          <button className="menu-row" onClick={()=>window.location.href="/help"}><span>❓<b>Help & Feedback</b><small>Get help or tell us what to improve</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>openLegal("/privacy")}><span>📄<b>Privacy Policy</b><small>How Cuddl handles personal information</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>openLegal("/terms")}><span>📜<b>Terms & Conditions</b><small>Rules for using Cuddl</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>openLegal("/disclaimer")}><span>⚖️<b>Disclaimer</b><small>Important product and safety information</small></span><strong>›</strong></button>
+          <button className="menu-row" onClick={()=>openLegal("/legal-resolution")}><span>🧾<b>Legal resolution</b><small>Questions, disputes and resolutions</small></span><strong>›</strong></button>
+        </div>
+      </div>}
       {referralOpen && <div className="overlay popup-overlay"><div className="login-popup">
         <div className="eyebrow">Referral & rewards</div><h2>🎁 Invite. Qualify. Earn.</h2>
         {referralBusy?<p className="sub">Loading your referral program…</p>:<>
