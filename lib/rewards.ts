@@ -94,7 +94,18 @@ export function ensureRewardsSchema(){
       sql`INSERT INTO referral_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
       sql`INSERT INTO bottle_settings(id) VALUES (1) ON CONFLICT(id) DO NOTHING`
     ];
-    for(const statement of statements) await db.execute(statement);
+    for(const statement of statements){
+      try{
+        await db.execute(statement);
+      }catch(error:any){
+        // Multiple serverless instances can race on CREATE TABLE. PostgreSQL may
+        // report the losing CREATE as a pg_type duplicate even though the table
+        // now exists. Treat only that specific CREATE TABLE race as success.
+        const detail=String(error?.detail||error?.cause?.detail||"");
+        const isCreate=String(statement.queryChunks?.[0]?.value||"").trim().toUpperCase().startsWith("CREATE");
+        if(!(isCreate && error?.code==="23505" && detail.includes("pg_type_typname_nsp_index"))) throw error;
+      }
+    }
   })();
   ready=ready.catch(error=>{ready=null;throw error;});
   return ready;
