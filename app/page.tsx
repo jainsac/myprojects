@@ -1240,7 +1240,7 @@ export default function Home() {
                   <rect x="28" y="28" width="112" height="112" rx="22" fill="#fdecef"/><rect x="460" y="28" width="112" height="112" rx="22" fill="#edf3ff"/>
                   <rect x="28" y="460" width="112" height="112" rx="22" fill="#edf9f3"/><rect x="460" y="460" width="112" height="112" rx="22" fill="#f5efff"/>
                   {[0,1,2,3].map(pi=>[0,1,2,3].map(ti=>{const home=[[58,58],[108,58],[58,108],[108,108]][ti];const off=pi===0?[0,0]:pi===1?[402,0]:pi===2?[0,402]:[402,402];const xy=[home[0]+off[0],home[1]+off[1]];return <circle key={"h"+pi+ti} cx={xy[0]} cy={xy[1]} r="13" fill="#fff" stroke={LUDO_COLORS[pi]} strokeWidth="5"/>;}))}
-                  {LUDO_TRACK.map(([x,y],i)=><circle key={"track"+i} cx={x} cy={y} r="9.5" fill={i%13===0?LUDO_COLORS[Math.floor(i/13)%4]:"#f7f5f6"} stroke="#ddd8dc" strokeWidth="1.5"/>}
+                  {LUDO_TRACK.map(([x,y],i)=><circle key={"track"+i} cx={x} cy={y} r="9.5" fill={i%13===0?LUDO_COLORS[Math.floor(i/13)%4]:"#f7f5f6"} stroke="#ddd8dc" strokeWidth="1.5"/>)}
                   {[0,1,2,3].map(pi=>Array.from({length:5},(_,k)=>{const start=[0,13,26,39][pi];const xy=LUDO_TRACK[(start+k)%52];const cx=300+(xy[0]-300)*((k+1)/6),cy=300+(xy[1]-300)*((k+1)/6);return <circle key={"lane"+pi+k} cx={cx} cy={cy} r="9" fill={LUDO_COLORS[pi]} opacity=".65"/>;}))}
                   <path d="M260 260L340 260L300 300Z" fill="#e95d72"/><path d="M340 260L340 340L300 300Z" fill="#5b82d8"/><path d="M340 340L260 340L300 300Z" fill="#55a67a"/><path d="M260 340L260 260L300 300Z" fill="#a57ad8"/>
                   {(roomOpen.players||[]).slice(0,4).flatMap((p:any,pi:number)=>(gameLudoPositions[pi]||[-1,-1,-1,-1]).map((progress:number,ti:number)=>{
