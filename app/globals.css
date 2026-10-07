@@ -582,3 +582,20 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 .music-grid{margin-bottom:20px}
 .single-profile-panel>.eyebrow{display:none}
 @media(max-width:620px){.profile-facts{grid-template-columns:1fr}.profile-facts>div{min-height:58px}.nav-label{font-size:10px}}
+
+
+/* Real Ludo board */
+.ludo-real-stage{display:flex;flex-direction:column;gap:12px}
+.ludo-player-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.ludo-player{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid #eee;border-radius:14px;background:#fff;min-width:0;opacity:.72}
+.ludo-player.turn{opacity:1;border-color:#e95d72;box-shadow:0 5px 16px rgba(233,93,114,.12)}
+.ludo-mini-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:#f4edf0;font-size:10px;font-weight:850;flex:0 0 auto}
+.ludo-mini-avatar img{width:100%;height:100%;object-fit:cover}
+.ludo-player span:last-child{display:flex;flex-direction:column;min-width:0}.ludo-player b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ludo-player small{font-size:8px;color:#999;font-weight:800;letter-spacing:.08em}
+.ludo-board-real{width:min(100%,520px);margin:0 auto;border-radius:28px;padding:7px;background:#f7f4f6;box-shadow:0 16px 40px rgba(0,0,0,.1)}
+.ludo-board-real svg{display:block;width:100%;height:auto;border-radius:22px}
+.ludo-controls{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:12px;padding:10px 0}
+.ludo-dice{width:68px;height:68px;border-radius:17px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.ludo-dice span{font-size:7px;letter-spacing:.08em;color:#999;font-weight:850}.ludo-dice strong{font-size:28px;line-height:1}
+.ludo-turn-copy{display:flex;flex-direction:column}.ludo-turn-copy b{font-size:13px}.ludo-turn-copy small{font-size:10px;color:#888;margin-top:3px}
+@media(max-width:620px){.ludo-player-strip{grid-template-columns:repeat(2,1fr)}.ludo-controls{grid-template-columns:62px 1fr}.ludo-controls .btn{grid-column:1/-1;width:100%}.ludo-board-real{border-radius:22px}}
