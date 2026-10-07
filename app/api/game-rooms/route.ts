@@ -130,11 +130,17 @@ export async function GET(request:Request){
   if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
   try{
     await ensureRooms();
-    const game=String(new URL(request.url).searchParams.get("game")||"").trim();
+    const params=new URL(request.url).searchParams;
+    const game=String(params.get("game")||"").trim();
+    const discover=params.get("discover")==="1";
     const db=getDb();
     const rows=game
-      ? await db.execute(sql`SELECT id,game_key,status,created_at FROM game_rooms WHERE game_key=${game} AND status IN ('OPEN','ACTIVE') AND (host_user_id<>${current.user.id} OR guest_user_id IS NULL) ORDER BY created_at DESC LIMIT 20`)
-      : await db.execute(sql`SELECT id,game_key,status,created_at FROM game_rooms WHERE status IN ('OPEN','ACTIVE') AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id}) ORDER BY created_at DESC LIMIT 20`);
-    return NextResponse.json({rooms:(rows as any).rows||[]});
+      ? await db.execute(sql`SELECT id,game_key,status,created_at,host_user_id,guest_user_id,player_user_ids FROM game_rooms WHERE game_key=${game} AND status IN ('OPEN','ACTIVE') AND (host_user_id<>${current.user.id} OR guest_user_id IS NULL) ORDER BY created_at DESC LIMIT 20`)
+      : discover
+        ? await db.execute(sql`SELECT id,game_key,status,created_at,host_user_id,guest_user_id,player_user_ids FROM game_rooms WHERE status IN ('OPEN','ACTIVE') ORDER BY created_at DESC LIMIT 80`)
+        : await db.execute(sql`SELECT id,game_key,status,created_at,host_user_id,guest_user_id,player_user_ids FROM game_rooms WHERE status IN ('OPEN','ACTIVE') AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id}) ORDER BY created_at DESC LIMIT 20`);
+    const base=(rows as any).rows||[];
+    const rooms=discover||game?await Promise.all(base.map(async(r:any)=>({...r,players:await roomPlayers(db,r)}))):base;
+    return NextResponse.json({rooms});
   }catch(e){console.error(e);return NextResponse.json({error:"Could not load rooms."},{status:500});}
 }
