@@ -601,3 +601,5 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 @media(max-width:620px){.ludo-player-strip{grid-template-columns:repeat(2,1fr)}.ludo-controls{grid-template-columns:62px 1fr}.ludo-controls .btn{grid-column:1/-1;width:100%}.ludo-board-real{border-radius:22px}}
 
 .experience-avatar{overflow:hidden}.experience-avatar img{width:100%;height:100%;object-fit:cover;display:block}.experience-players{flex-wrap:wrap}.waiting-player{opacity:.7}
+
+.participant{overflow:hidden}.participant img{width:100%;height:100%;object-fit:cover;display:block}
