@@ -15,6 +15,22 @@ export function createMediaUploadToken(userId:string,ttlMs=10*60*1000){
   const payload=Buffer.from(JSON.stringify({userId,exp:Date.now()+ttlMs})).toString("base64url");
   return payload+"."+sign(payload);
 }
+export function createTestSessionToken(userId:string,ttlMs=30*60*1000){
+  const payload=Buffer.from(JSON.stringify({userId,exp:Date.now()+ttlMs,scope:"cuddl-test-session"})).toString("base64url");
+  return payload+"."+sign(payload);
+}
+export function verifyTestSessionToken(value:string){
+  const [payload,sig]=String(value||"").split(".");
+  if(!payload||!sig)return null;
+  const expected=sign(payload);
+  if(sig.length!==expected.length || !timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return null;
+  try{
+    const parsed=JSON.parse(Buffer.from(payload,"base64url").toString("utf8"));
+    if(parsed?.scope!=="cuddl-test-session" || !parsed?.userId || Number(parsed.exp||0)<Date.now())return null;
+    return String(parsed.userId);
+  }catch{return null;}
+}
+
 export function verifyMediaUploadToken(value:string){
   const [payload,sig]=String(value||"").split(".");
   if(!payload||!sig)return null;
