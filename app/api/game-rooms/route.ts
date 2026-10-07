@@ -91,7 +91,7 @@ async function roomPlayers(db:any, room:any){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
       const reaction=String(body.reaction||"").slice(0,24);
       if(!reaction)return NextResponse.json({error:"Reaction is required."},{status:400});
-      const member=await db.execute(sql`SELECT id FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
+      const member=await db.execute(sql`SELECT id FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(player_user_ids) OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
       if(!((member as any).rows?.length))return NextResponse.json({error:"Room not found."},{status:404});
       await db.execute(sql`CREATE TABLE IF NOT EXISTS game_room_reactions (id bigserial PRIMARY KEY,room_id text NOT NULL,user_id text NOT NULL,reaction text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`);
       await db.execute(sql`INSERT INTO game_room_reactions(room_id,user_id,reaction) VALUES(${roomId},${current.user.id},${reaction})`);
@@ -108,7 +108,7 @@ async function roomPlayers(db:any, room:any){
 
     if(action==="update"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
-      const rows=await db.execute(sql`SELECT id FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id}) LIMIT 1`);
+      const rows=await db.execute(sql`SELECT id FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(player_user_ids)) LIMIT 1`);
       if(!((rows as any).rows?.length))return NextResponse.json({error:"Room not found."},{status:404});
       const nextState=body.state && typeof body.state==="object" ? body.state : {};
       await db.execute(sql`UPDATE game_rooms SET state=${JSON.stringify(nextState)}::jsonb,updated_at=now(),status=CASE WHEN guest_user_id IS NULL THEN status ELSE 'ACTIVE' END WHERE id=${roomId}`);
