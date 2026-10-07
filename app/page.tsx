@@ -176,6 +176,7 @@ export default function Home() {
   const [roomOpen, setRoomOpen] = useState<any>(null);
   const [roomBusy, setRoomBusy] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [liveGameRooms, setLiveGameRooms] = useState<Record<string,any[]>>({});
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   const [profileMenuOpen,setProfileMenuOpen]=useState(false);
   const [profileFilterOpen,setProfileFilterOpen]=useState(false);
@@ -256,6 +257,7 @@ export default function Home() {
   useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{},players:d.room.players||x.players||[]}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}
         if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p=Array.from({length:4},(_,pi)=>Array.from({length:4},(_,ti)=>Number(s.positions?.[pi]?.[ti]??-1)));setGameLudoPositions(p);setLudoTurn(Number(s.turn||0));setGameDice(Number(s.lastRoll||0));}
         if(s.game==="Memory Match"&&Array.isArray(s.matched)){setMemoryMatched(s.matched);if(Array.isArray(s.cards)&&s.cards.length)setMemoryCards(s.cards)}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
+  useEffect(()=>{if(tab!=="lounge"||!user)return;let alive=true;fetch("/api/game-rooms?discover=1",{cache:"no-store"}).then(r=>r.json()).then(d=>{if(!alive)return;const grouped:Record<string,any[]>={};(d.rooms||[]).forEach((r:any)=>{(grouped[r.game_key] ||= []).push(r)});setLiveGameRooms(grouped)}).catch(()=>{});return()=>{alive=false}},[tab,user]);
   useEffect(()=>{if(roomOpen?.type==="Game"&&!roomOpen?.roomId)loadGameRooms(roomOpen.name)},[roomOpen?.type,roomOpen?.name,roomOpen?.roomId]);
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
@@ -1029,9 +1031,9 @@ export default function Home() {
 
           <div className="eyebrow" style={{marginTop:28}}>Games</div>
           <div className="lounge-grid games-grid">
-          {games.map(([icon,name,meta],idx) => {const a=experienceAccess(name,"GAME"); const faces=[["SK","Sahil"],["AN","Aanya"],["RM","Rohan"],["NK","Neha"]].slice(0,2+(idx%3)); return <article className="lounge-card game-card" key={name}>
-            <div className="lounge-card-visual game-visual"><div className="room-icon lounge-icon">{icon}</div><span className={idx%3===2?"waiting-pill":"live-dot"}>{idx%3===2?"OPEN":"● LIVE"}</span><div className="participant-stack">{faces.map(([initial,n],i)=><span key={n} title={n} className={"participant p"+i}>{initial}</span>)}<span className="participant more">+{Math.max(1,(idx+2))}</span></div></div>
-            <div className="lounge-card-body"><div className="eyebrow">GAME · {idx<14?"SOCIAL":"PREMIUM"}</div><h3>{name}</h3><p>{meta}</p><div className="lounge-card-foot"><span className="join-note">👥 {idx%3===2?"Waiting for players":"Players live now"}</span>{a.play?<button className="join" disabled={roomBusy} onClick={()=>createGameRoom(name,icon,meta)}>Play</button>:a.spectate?<button className="join" disabled={roomBusy} onClick={()=>openSpectatorRoom(name,icon,meta)}>Watch</button>:<button className="join" onClick={()=>notify("Upgrade to unlock this game.")}>Upgrade</button>}</div></div>
+          {games.map(([icon,name,meta],idx) => {const a=experienceAccess(name,"GAME"); const rooms=liveGameRooms[name]||[]; const activeRoom=rooms.find((r:any)=>r.status==="ACTIVE")||rooms[0]; const faces=(activeRoom?.players||[]).slice(0,4); return <article className="lounge-card game-card" key={name}>
+            <div className="lounge-card-visual game-visual"><div className="room-icon lounge-icon">{icon}</div><span className={activeRoom?.status==="ACTIVE"?"live-dot":"waiting-pill"}>{activeRoom?.status==="ACTIVE"?"● LIVE":"OPEN"}</span><div className="participant-stack">{faces.map((p:any,i:number)=><span key={p.userId||i} title={p.displayName} className={"participant p"+i}>{p.avatarUrl?<img src={p.avatarUrl} alt=""/>:p.initial||"P"}</span>)}{!faces.length&&<span className="participant more">+</span>}{faces.length>0&&<span className="participant more">+{Math.max(0,(activeRoom?.players||[]).length-faces.length)}</span>}</div></div>
+            <div className="lounge-card-body"><div className="eyebrow">GAME · {idx<14?"SOCIAL":"PREMIUM"}</div><h3>{name}</h3><p>{meta}</p><div className="lounge-card-foot"><span className="join-note">👥 {activeRoom?.status==="ACTIVE" ? ((activeRoom.players||[]).length+" player"+((activeRoom.players||[]).length===1?"":"s")+" live") : "Waiting for players"}</span>{a.play?<button className="join" disabled={roomBusy} onClick={()=>createGameRoom(name,icon,meta)}>Play</button>:a.spectate?<button className="join" disabled={roomBusy} onClick={()=>openSpectatorRoom(name,icon,meta)}>Watch</button>:<button className="join" onClick={()=>notify("Upgrade to unlock this game.")}>Upgrade</button>}</div></div>
           </article>})}
           </div>
 
