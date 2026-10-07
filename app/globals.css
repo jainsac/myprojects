@@ -547,3 +547,19 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 .music-wave{height:75px;display:flex;align-items:center;justify-content:center;gap:6px;margin:22px auto}.music-wave span{width:5px;border-radius:99px;background:#ed6074;height:30px;animation:cuddl-wave 1s ease-in-out infinite alternate}.music-wave span:nth-child(2){height:48px;animation-delay:.1s}.music-wave span:nth-child(3){height:64px;animation-delay:.2s}.music-wave span:nth-child(4){height:38px;animation-delay:.3s}.music-wave span:nth-child(5){height:58px;animation-delay:.15s}.music-wave span:nth-child(6){height:42px;animation-delay:.25s}.music-wave span:nth-child(7){height:28px;animation-delay:.35s}
 @keyframes cuddl-wave{to{transform:scaleY(.55)}}.experience-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:14px;color:#777;font-size:12px}
 @media(max-width:520px){.experience-overlay{padding:8px!important}.experience-stage{border-radius:22px;padding:17px;max-height:95vh}.experience-title h2{font-size:22px}.experience-players{padding:12px 0}.experience-player span{font-size:11px}.answer-grid{grid-template-columns:1fr}.ludo-board{grid-template-columns:54px 1fr 54px;padding:10px}.game-stage-canvas{padding:11px}.experience-footer{align-items:flex-start}.experience-footer .chip{padding:8px 12px}}
+
+
+/* Lounge: social-first live player cards */
+.lounge-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:12px}
+.lounge-card{background:#fff;border:0;border-radius:22px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.06);min-width:0}
+.lounge-card-visual{height:154px;position:relative;background:linear-gradient(145deg,#fff4f6,#f7f4ff);display:flex;align-items:center;justify-content:center}
+.game-visual{background:linear-gradient(145deg,#f6f7ff,#fff5f6)}
+.lounge-icon{width:68px;height:68px;border-radius:22px;background:rgba(255,255,255,.88);display:grid;place-items:center;font-size:38px;box-shadow:0 8px 24px rgba(0,0,0,.07)}
+.live-dot,.waiting-pill{position:absolute;top:12px;right:12px;padding:6px 9px;border-radius:999px;background:#fff;font-size:10px;font-weight:850;letter-spacing:.08em;color:#e45a70;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+.waiting-pill{color:#777}
+.participant-stack{position:absolute;left:12px;bottom:12px;display:flex;align-items:center}
+.participant{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#222;color:#fff;border:2px solid #fff;font-size:9px;font-weight:850;margin-left:-7px;box-shadow:0 2px 7px rgba(0,0,0,.12)}
+.participant:first-child{margin-left:0}.participant.p1{background:#e76a7d}.participant.p2{background:#8d7bc1}.participant.p3{background:#6a9b88}.participant.more{background:#fff;color:#555}
+.lounge-card-body{padding:17px 17px 16px}.lounge-card-body .eyebrow{margin:0 0 5px;font-size:9px}.lounge-card-body h3{font-size:19px;line-height:1.2;margin:0 0 7px;letter-spacing:-.2px}.lounge-card-body p{margin:0;color:#777;font-size:13px;min-height:20px}
+.lounge-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}.join-note{font-size:11px;color:#777;font-weight:650}.lounge-card-foot .join{margin:0;min-width:76px}
+@media(max-width:620px){.lounge-grid{grid-template-columns:1fr;gap:14px}.lounge-card-visual{height:145px}.lounge-card-body h3{font-size:20px}}
