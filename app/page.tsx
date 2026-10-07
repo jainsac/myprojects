@@ -193,7 +193,8 @@ export default function Home() {
   const premiumPrompts = ["Choose your answer and compare with your partner.","Ask your partner the same question and reveal together.","Pick one: adventure, comfort, humour or ambition.","Describe your ideal shared weekend in one sentence.","Name one thing that would make a date unforgettable.","Choose the next move together."];
   function startPremiumRound(){setExperienceRound(r=>r+1);setExperienceChoice("");setGamePrompt(premiumPrompts[(experienceRound-1)%premiumPrompts.length]);}
   function answerPremiumRound(){if(roomOpen?.role==="SPECTATOR")return;setExperienceChoice("answered");setExperienceScore(s=>s+1);notify("Point recorded ✦");}
-  const [gameLudoPositions, setGameLudoPositions] = useState<[number,number]>([0,0]);
+  const [gameLudoPositions, setGameLudoPositions] = useState<number[]>([0,0,0,0]);
+  const [ludoTurn, setLudoTurn] = useState(0);
   const [memoryCards, setMemoryCards] = useState<string[]>([]);
   const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
   const [memoryMatched, setMemoryMatched] = useState<number[]>([]);
@@ -228,7 +229,7 @@ export default function Home() {
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||"Could not create room.");
       resetGame();
-      setRoomOpen({type:"Game",icon,name,meta,roomId:d.room.id,role:d.room.role,status:d.room.status,state:{}});
+      setRoomOpen({type:"Game",icon,name,meta,roomId:d.room.id,role:d.room.role,status:d.room.status,state:{},players:d.room.players||[]});
       notify("Game room created ✦");
     }catch{
       resetGame();
@@ -237,16 +238,16 @@ export default function Home() {
     }finally{setRoomBusy(false)}
   }
   async function loadGameRooms(name:string){try{const r=await fetch("/api/game-rooms?game="+encodeURIComponent(name),{cache:"no-store"});const d=await r.json();if(Array.isArray(d.rooms))setAvailableRooms(d.rooms)}catch{}}
-  async function joinGameRoom(room:any){setRoomBusy(true);try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:room.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not join room.");resetGame();setRoomOpen({type:"Game",icon:roomOpen?.icon||"🎮",name:room.game_key,meta:"Multiplayer game",roomId:d.room.id,role:d.room.role,status:d.room.status,state:d.room.state||{}});notify("Joined game room 🎮");}catch(e){notify(e instanceof Error?e.message:"Could not join room.");}finally{setRoomBusy(false)}}
+  async function joinGameRoom(room:any){setRoomBusy(true);try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"join",roomId:room.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not join room.");resetGame();setRoomOpen({type:"Game",icon:roomOpen?.icon||"🎮",name:room.game_key,meta:"Multiplayer game",roomId:d.room.id,role:d.room.role,status:d.room.status,state:d.room.state||{},players:d.room.players||[]});notify("Joined game room 🎮");}catch(e){notify(e instanceof Error?e.message:"Could not join room.");}finally{setRoomBusy(false)}}
   async function updateGameRoom(state:any){if(!roomOpen?.roomId || roomOpen.role==="SPECTATOR")return;await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",roomId:roomOpen.roomId,state})}).catch(()=>{})}
   async function closeGameRoom(){if(roomOpen?.roomId)await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"leave",roomId:roomOpen.roomId})}).catch(()=>{});setRoomOpen(null);setAvailableRooms([])}
-  useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{}}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}
-        if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p:[number,number]=[Number(s.positions[0]||0),Number(s.positions[1]||0)];setGameLudoPositions(p);setGameDicePos(p[roomOpen.role==="GUEST"?1:0]||0);setGameDice(Number(s.lastRoll||0))}
+  useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{},players:d.room.players||x.players||[]}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}
+        if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p=Array.from({length:4},(_,i)=>Number(s.positions[i]||0));setGameLudoPositions(p);setLudoTurn(Number(s.turn||0));const slot=(roomOpen?.players||[]).findIndex((x:any)=>String(x.userId)===String(user?.user?.id));setGameDicePos(p[slot>=0?slot:0]||0);setGameDice(Number(s.lastRoll||0))}
         if(s.game==="Memory Match"&&Array.isArray(s.matched)){setMemoryMatched(s.matched);if(Array.isArray(s.cards)&&s.cards.length)setMemoryCards(s.cards)}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
   useEffect(()=>{if(roomOpen?.type==="Game"&&!roomOpen?.roomId)loadGameRooms(roomOpen.name)},[roomOpen?.type,roomOpen?.name,roomOpen?.roomId]);
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
-    setGameDicePos(0); setGameDice(0); setGameLudoPositions([0,0]); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
+    setGameDicePos(0); setGameDice(0); setGameLudoPositions([0,0,0,0]); setLudoTurn(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
     setGamePrompt(""); setExperienceRound(1); setExperienceScore(0); setExperienceChoice(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
   }
   function playTic(i:number){
@@ -264,10 +265,17 @@ export default function Home() {
   }
   function rollDice(){
     if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of rolling.");
-    const n=1+Math.floor(Math.random()*6); setGameDice(n);
-    const player=roomOpen?.role==="GUEST"?1:0; const next=[...gameLudoPositions] as [number,number]; next[player]=Math.min(30,next[player]+n); setGameLudoPositions(next); setGameDicePos(next[player]);
-    if(roomOpen?.roomId) updateGameRoom({game:"Ludo After Work",positions:next,turn:player===0?1:0,lastRoll:n,winner:next[player]>=30?player:null});
-    if(next[player]>=30) notify("Finish! You won the Ludo sprint 🏁");
+    const players=Array.isArray(roomOpen?.players)?roomOpen.players:[];
+    const slot=Math.max(0,players.findIndex((x:any)=>String(x.userId)===String(user?.user?.id)));
+    const player=slot>=0?slot:0;
+    if(roomOpen?.name==="Ludo After Work" && roomOpen?.roomId && player!==ludoTurn) return notify("Wait for your turn.");
+    const n=1+Math.floor(Math.random()*6);
+    const next=[...gameLudoPositions];
+    next[player]=Math.min(56,next[player]+n);
+    const nextTurn=next[player]>=56?player:(player+1)%Math.max(2,Math.min(4,players.length||2));
+    setGameDice(n);setGameDicePos(next[player]);setGameLudoPositions(next);setLudoTurn(nextTurn);
+    if(roomOpen?.roomId) updateGameRoom({game:"Ludo After Work",positions:next,turn:nextTurn,lastRoll:n,winner:next[player]>=56?player:null});
+    if(next[player]>=56) notify("Finish! You won Ludo 🏆");
   }
   function flipMemory(i:number){
     if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of playing.");
