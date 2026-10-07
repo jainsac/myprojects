@@ -824,13 +824,14 @@ export default function Home() {
     notify("Spark sent 💗");
   }
 
-  const nav = [["discover","heart","Discover"],["lounge","game","Lounge"],["matches","match","Matches"],["dates","spark","Dates"],["bottle","bottle","Bottle"],["profile","profile","Profile"]] as const;
+  const nav = [["discover","heart","Discover"],["lounge","game","Lounge"],["matches","chat","Chat"],["dates","spark","Dates"],["profile","profile","Profile"]] as const;
 
   const AppIcon=({name,size=22}:{name:string;size?:number})=>{
     const paths:Record<string,string[]>={
       heart:["M20.8 8.9c0 5.2-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.9A4.7 4.7 0 0 1 12 6.3a4.7 4.7 0 0 1 8.8 2.6Z"],
       game:["M6.5 8h11a4.5 4.5 0 0 1 4.2 6.1l-1.4 3.6a2.3 2.3 0 0 1-4.1.4L14.7 15H9.3l-1.5 3.1a2.3 2.3 0 0 1-4.1-.4l-1.4-3.6A4.5 4.5 0 0 1 6.5 8Z","M8 11v4","M6 13h4","M16 12h.01","M18 14h.01"],
       match:["M7 4.5h10A2.5 2.5 0 0 1 19.5 7v10a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 17V7A2.5 2.5 0 0 1 7 4.5Z","M8 9h8","M8 13h5"],
+      chat:["M5.2 5.2h13.6A2.2 2.2 0 0 1 21 7.4v7.2a2.2 2.2 0 0 1-2.2 2.2H11l-4.8 3v-3H5.2A2.2 2.2 0 0 1 3 14.6V7.4a2.2 2.2 0 0 1 2.2-2.2Z","M7 9.5h10","M7 13h6"],
       spark:["M12 2.8l1.7 5.5 5.5 1.7-5.5 1.7-1.7 5.5-1.7-5.5-5.5-1.7 5.5-1.7Z"],
       bottle:["M9 3h6","M10 3v5l-4.2 7.1A3.2 3.2 0 0 0 8.5 20h7a3.2 3.2 0 0 0 2.7-4.9L14 8V3","M7.5 14h9"],
       profile:["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z","M4 21a8 8 0 0 1 16 0"]
@@ -870,10 +871,6 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">Cuddl</div>
         <div className="topbar-actions">
-          <button className="top-action-link" aria-label="Open messages" onClick={()=>{setTab("matches");setChatMatch(null);}}>
-            <span className="top-action-icon"><AppIcon name="match" size={21}/></span><span>Messages</span>
-            {notifications.some((n:any)=>!n.read && String(n.title||"").toLowerCase().includes("message"))&&<b className="notification-badge">!</b>}
-          </button>
           <button className="top-action-link" aria-label="Open notifications" onClick={()=>setNotificationOpen(true)}>
             <span className="top-action-icon"><AppIcon name="spark" size={21}/></span><span>Alerts</span>
             {notifications.some((n:any)=>!n.read)&&<b className="notification-badge">{notifications.filter((n:any)=>!n.read).length>9?"9+":notifications.filter((n:any)=>!n.read).length}</b>}
@@ -939,17 +936,17 @@ export default function Home() {
             })}
             {Array.isArray(person.lifestylePreferences?.personalityStickers)&&person.lifestylePreferences.personalityStickers.length>0&&<div className="showcase-stickers">{person.lifestylePreferences.personalityStickers.slice(0,8).map((s:string)=><span className="personality-sticker" key={s}>{s}</span>)}</div>}
             <div className="profile-facts">
-              {person.lifestylePreferences?.profession&&<div><b>Profession</b><span>{person.lifestylePreferences.profession}{person.lifestylePreferences?.company?" · "+person.lifestylePreferences.company:""}</span></div>}
-              {person.lifestylePreferences?.education&&<div><b>Education</b><span>{person.lifestylePreferences.education}</span></div>}
-              {person.lifestylePreferences?.relationshipGoal&&<div><b>Looking for</b><span>{person.lifestylePreferences.relationshipGoal}</span></div>}
-              {person.lifestylePreferences?.foodPreference&&<div><b>Food preference</b><span>{person.lifestylePreferences.foodPreference}</span></div>}
-              {person.lifestylePreferences?.diet&&<div><b>Diet</b><span>{person.lifestylePreferences.diet}</span></div>}
-              {person.lifestylePreferences?.smoking&&<div><b>Smoking</b><span>{person.lifestylePreferences.smoking}</span></div>}
-              {person.lifestylePreferences?.drinking&&<div><b>Drinking</b><span>{person.lifestylePreferences.drinking}</span></div>}
-              {person.lifestylePreferences?.children&&<div><b>Children</b><span>{person.lifestylePreferences.children}</span></div>}
-              {person.lifestylePreferences?.pets&&<div><b>Pets</b><span>{person.lifestylePreferences.pets}</span></div>}
-              {person.lifestylePreferences?.religion&&<div><b>Religion</b><span>{person.lifestylePreferences.religion}</span></div>}
-              {person.lifestylePreferences?.community&&<div><b>Community</b><span>{person.lifestylePreferences.community}</span></div>}
+              {person.lifestylePreferences?.profession&&<div><i><AppIcon name="briefcase" size={18}/></i><b>Profession</b><span>{person.lifestylePreferences.profession}{person.lifestylePreferences?.company?" · "+person.lifestylePreferences.company:""}</span></div>}
+              {person.lifestylePreferences?.education&&<div><i><AppIcon name="education" size={18}/></i><b>Education</b><span>{person.lifestylePreferences.education}</span></div>}
+              {person.lifestylePreferences?.relationshipGoal&&<div><i><AppIcon name="relationship" size={18}/></i><b>Looking for</b><span>{person.lifestylePreferences.relationshipGoal}</span></div>}
+              {person.lifestylePreferences?.foodPreference&&<div><i><AppIcon name="food" size={18}/></i><b>Food preference</b><span>{person.lifestylePreferences.foodPreference}</span></div>}
+              {person.lifestylePreferences?.diet&&<div><i><AppIcon name={String(person.lifestylePreferences.diet).toLowerCase().includes("vegan")?"vegan":String(person.lifestylePreferences.diet).toLowerCase().includes("veget")?"leaf":"food"} size={18}/></i><b>Diet</b><span>{person.lifestylePreferences.diet}</span></div>}
+              {person.lifestylePreferences?.smoking&&<div><i><AppIcon name="smoke" size={18}/></i><b>Smoking</b><span>{person.lifestylePreferences.smoking}</span></div>}
+              {person.lifestylePreferences?.drinking&&<div><i><AppIcon name="drink" size={18}/></i><b>Drinking</b><span>{person.lifestylePreferences.drinking}</span></div>}
+              {person.lifestylePreferences?.children&&<div><i><AppIcon name="child" size={18}/></i><b>Children</b><span>{person.lifestylePreferences.children}</span></div>}
+              {person.lifestylePreferences?.pets&&<div><i><AppIcon name={String(person.lifestylePreferences.pets).toLowerCase().includes("no pets")?"noPet":"pet"} size={18}/></i><b>Pets</b><span>{person.lifestylePreferences.pets}</span></div>}
+              {person.lifestylePreferences?.religion&&<div><i><AppIcon name="religion" size={18}/></i><b>Religion</b><span>{person.lifestylePreferences.religion}</span></div>}
+              {person.lifestylePreferences?.community&&<div><i><AppIcon name="community" size={18}/></i><b>Community</b><span>{person.lifestylePreferences.community}</span></div>}
             </div>
             <div className="profile-tags">{(person.tags||[]).map((t:string)=><span className="tag" key={t}>{t}</span>)}</div>
             <div className="actions profile-actions"><button className="btn ghost" onClick={() => {setIndex(i=>i+1);notify("Passed — suggestions tuned");}}>Pass</button><button className="btn" onClick={spark}>♥ Send Spark</button></div>
@@ -987,12 +984,17 @@ export default function Home() {
           </article>})}
           </div>
 
-          {(loungeFilter==="All"||loungeFilter==="Music") && <><div className="eyebrow" style={{marginTop:18}}>Music</div>
-          {music.map(([icon,name,meta]) => <div className="room" key={name} onClick={()=>setRoomOpen({type:"Music",icon,name,meta})}><div className="room-top"><div className="room-icon">{icon}</div><div className="grow"><b>{name}</b><div className="room-meta">{meta}</div></div><button className="join" onClick={(e)=>{e.stopPropagation();setRoomOpen({type:"Music",icon,name,meta})}}>Join</button></div><div className="room-meta">🎥 Camera optional · 🎙️ Mic optional · 🎉 Cheer = appreciation · Spark = romantic interest</div></div>)}</>}
+          {(loungeFilter==="All"||loungeFilter==="Music") && <><div className="eyebrow" style={{marginTop:28}}>Music</div>
+          <div className="lounge-grid music-grid">
+          {music.map(([icon,name,meta],idx) => <article className="lounge-card music-card" key={name}>
+            <div className="lounge-card-visual music-visual"><div className="room-icon lounge-icon">{icon}</div><span className="live-dot">● LIVE</span><div className="participant-stack"><span className="participant p0">AN</span><span className="participant p1">RK</span><span className="participant p2">MS</span><span className="participant more">+{idx+6}</span></div></div>
+            <div className="lounge-card-body"><div className="eyebrow">MUSIC · LIVE ROOM</div><h3>{name}</h3><p>{meta}</p><div className="lounge-card-foot"><span className="join-note">🎙 Mic optional · 🎉 React</span><button className="join" onClick={()=>setRoomOpen({type:"Music",icon,name,meta})}>Join</button></div></div>
+          </article>)}
+          </div></>}
         </>}
 
         {tab === "matches" && <>
-          <div className="eyebrow">Mutual connections</div><h1 className="hero-title">Your matches.</h1><p className="sub">Continue chemistry through chat, games, calls or a real-world activity.</p>
+          <div className="eyebrow">Conversations</div><h1 className="hero-title">Chat & matches.</h1><p className="sub">Your conversations, mutual connections and shared experiences.</p>
           <div className="panel messages-shortcut"><div><b>💬 Messages</b><p className="sub">Your chats live here. New message alerts also appear at the top.</p></div><button className="btn" onClick={()=>document.querySelector(".chat-panel")?.scrollIntoView({behavior:"smooth",block:"start"})}>Open chat</button></div>
           {(matches.length ? matches.map(m=>({name:m.other?.displayName||"Match",age:0,city:m.other?.city||"",initial:(m.other?.displayName||"M")[0],score:0,matchId:m.id})) : liked.map(p=>({...p,matchId:undefined}))).map((p:any) => <div className="panel" key={p.matchId||p.name}><div className="profile-row"><div className="avatar">{p.initial}</div><div className="grow"><b>{p.name}{p.age ? ", "+p.age : ""} ✓</b><div className="sub">{p.city || "Cuddl"}{p.score ? " · "+p.score+"% compatibility" : " · mutual connection"}</div></div></div><div className="actions"><button className="btn" onClick={() => openChat(p)} disabled={!p.matchId}>Chat</button><button className="btn ghost" onClick={() => {setTab("lounge");notify("Play with " + p.name)}}>Play</button><button className="btn ghost" onClick={() => notify("Profile opened")}>Profile</button></div></div>)}
           {chatMatch && <div className="panel chat-panel">
@@ -1061,7 +1063,7 @@ export default function Home() {
               }) : <div className="profile-tinder-empty"><span className="top-profile-avatar large">{myProfileInitial}</span><div><b>Add your first profile photo</b><small>Your photos and videos will appear here.</small></div></div>}
             </div>
             <div className="profile-tinder-copy"><div><h2>{user?.profile?.displayName||"Your profile"}</h2><p className="sub">{user?.profile?.city||city}</p></div><p className="profile-bio">{user?.profile?.bio||"Add a short bio so people know what makes you, you."}</p></div>
-            <div className="trust-badges profile-trust-badges">{myVerification.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{myVerification.aiAutoVerified&&myVerification.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}{myVerification.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{myVerification.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{myVerification.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}</div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Cuddl Verified":freeVerificationStatus==="ai_verified"?"✓ AI Verified":freeVerificationStatus==="reverify_required"?"Re-verify identity":"Verify identity"}</button><button className="btn ghost" onClick={()=>window.location.href="/profile/preview"}>👀 Preview</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
+            <div className="trust-badges profile-trust-badges">{myVerification.adminVerificationStatus==="verified"&&<span className="trust-badge">✓ Cuddl Verified</span>}{myVerification.aiAutoVerified&&myVerification.adminVerificationStatus!=="verified"&&<span className="trust-badge ai">✓ AI Verified</span>}{myVerification.photoVerified&&<span className="trust-badge">✓ Photo Verified</span>}{myVerification.phoneVerified&&<span className="trust-badge">✓ Phone Verified</span>}{myVerification.emailVerified&&<span className="trust-badge">✓ Email Verified</span>}</div><div className="actions"><button className="btn" onClick={openProfileEditor}>Edit profile</button><button className="btn ghost" onClick={()=>setMediaOpen(true)}>Photos & videos</button><button className="btn ghost" onClick={()=>setBoostOpen(true)}>🚀 Boost</button><button className="btn ghost" onClick={()=>setVerificationOpen(true)}>{freeVerificationStatus==="verified"?"✓ Cuddl Verified":freeVerificationStatus==="ai_verified"?"✓ AI Verified":freeVerificationStatus==="reverify_required"?"Re-verify identity":"Verify identity"}</button><button className="btn ghost" onClick={logout}>Sign out</button></div>
           </div>
           <section className="profile-preview-entry">
             <div>
@@ -1072,11 +1074,6 @@ export default function Home() {
             <button className="btn" onClick={()=>window.location.href="/profile/preview"}>Preview profile →</button>
           </section>
 
-          <section className="profile-tools">
-            <button className="profile-menu-trigger" onClick={()=>setProfileMenuOpen(true)}>
-              <span><b>☰ Profile menu</b><small>Search preferences, privacy, help, plans & legal</small></span><strong>›</strong>
-            </button>
-          </section>
           {profileFilterOpen && <section className="profile-discovery-filters">
             <div className="profile-menu-section-head"><div><div className="eyebrow">Discovery preferences</div><h3>Search & discovery filters</h3><p className="sub">Set the kind of people you want to meet. These controls stay inside your Profile menu, not on the Discover home screen.</p></div><button className="btn ghost" onClick={()=>setProfileFilterOpen(false)}>Done</button></div>
             <div className="filter-section-title">Basics</div>
@@ -1108,6 +1105,11 @@ export default function Home() {
               ["✨","Serendipity Mode","One surprise discovery outside your usual filters."],
             ].map(([icon,title,copy]) => <button className="card" key={title} onClick={() => {setActiveFeature({title,copy});setProfileModal("feature");}}><b>{icon} {title}</b><span>{copy}</span></button>)}
           </div>
+          <section className="profile-tools profile-tools-bottom">
+            <button className="profile-menu-trigger" onClick={()=>setProfileMenuOpen(true)}>
+              <span><b>☰ Profile menu</b><small>Search preferences, privacy, help, plans & legal</small></span><strong>›</strong>
+            </button>
+          </section>
         </>}
       </main>
 
