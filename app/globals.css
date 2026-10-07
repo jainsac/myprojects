@@ -603,3 +603,9 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 .experience-avatar{overflow:hidden}.experience-avatar img{width:100%;height:100%;object-fit:cover;display:block}.experience-players{flex-wrap:wrap}.waiting-player{opacity:.7}
 
 .participant{overflow:hidden}.participant img{width:100%;height:100%;object-fit:cover;display:block}
+
+.test-lab-popup{max-width:560px}
+.test-user-list{display:grid;gap:9px;margin:16px 0}
+.test-user-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #eee;border-radius:15px;background:#fff}
+.test-user-row>div{display:flex;flex-direction:column;min-width:0}.test-user-row b{font-size:14px}.test-user-row small{color:#888;font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+.test-user-row .btn{min-width:72px;padding:9px 13px;margin:0}
