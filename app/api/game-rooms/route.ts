@@ -11,12 +11,14 @@ async function ensureRooms() {
     host_user_id text NOT NULL,
     guest_user_id text,
     spectator_user_ids text[] NOT NULL DEFAULT ARRAY[]::text[],
+    player_user_ids text[] NOT NULL DEFAULT ARRAY[]::text[],
     state jsonb NOT NULL DEFAULT '{}'::jsonb,
     status text NOT NULL DEFAULT 'OPEN',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`);
   await db.execute(sql`ALTER TABLE game_rooms ADD COLUMN IF NOT EXISTS spectator_user_ids text[] NOT NULL DEFAULT ARRAY[]::text[]`);
+  await db.execute(sql`ALTER TABLE game_rooms ADD COLUMN IF NOT EXISTS player_user_ids text[] NOT NULL DEFAULT ARRAY[]::text[]`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS game_rooms_game_status_idx ON game_rooms(game_key,status,created_at DESC)`);
 }
 
@@ -34,21 +36,44 @@ export async function POST(request:Request){
     if(action==="create"){
       if(!gameKey)return NextResponse.json({error:"Game is required."},{status:400});
       const id=crypto.randomUUID();
-      await db.execute(sql`INSERT INTO game_rooms(id,game_key,host_user_id,state) VALUES(${id},${gameKey},${current.user.id},'{}'::jsonb)`);
-      return NextResponse.json({room:{id,gameKey,status:"OPEN",role:"HOST",state:{}}});
+      await db.execute(sql`INSERT INTO game_rooms(id,game_key,host_user_id,player_user_ids,state) VALUES(${id},${gameKey},${current.user.id},ARRAY[${current.user.id}]::text[],'{}'::jsonb)`);
+      return NextResponse.json({room:{id,gameKey,status:"OPEN",role:"HOST",state:{},players:[{userId:current.user.id,displayName:"You"}]}});
     }
+
+async function roomPlayers(db:any, room:any){
+  const ids=Array.isArray(room.player_user_ids)&&room.player_user_ids.length
+    ? room.player_user_ids
+    : [room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
+  if(!ids.length)return [];
+  const rows=await db.execute(sql`SELECT p.user_id,p.display_name,p.avatar_url FROM profiles p WHERE p.user_id=ANY(${ids}::text[])`);
+  const map=new Map<string,any>((rows as any).rows?.map((p:any)=>[String(p.user_id),p])||[]);
+  return ids.map((id:string,i:number)=>{const p=map.get(String(id));const name=p?.display_name||("Player "+(i+1));return {userId:id,displayName:name,avatarUrl:p?.avatar_url||"",initial:name.slice(0,1).toUpperCase(),slot:i};});
+}
 
     if(action==="join"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
       const spectator=body.role==="SPECTATOR";
-      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,state,status FROM game_rooms WHERE id=${roomId} LIMIT 1`);
+      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,player_user_ids,state,status FROM game_rooms WHERE id=${roomId} LIMIT 1`);
       const room=(rows as any).rows?.[0];
       if(!room)return NextResponse.json({error:"Room not found."},{status:404});
-      if(room.host_user_id===current.user.id)return NextResponse.json({room:{...room,role:"HOST"}});
+      if(room.host_user_id===current.user.id)return NextResponse.json({room:{...room,role:"HOST",players:await roomPlayers(db,room)}});
       const spectators=Array.isArray(room.spectator_user_ids)?room.spectator_user_ids:[];
+      const players=Array.isArray(room.player_user_ids)&&room.player_user_ids.length?room.player_user_ids:[room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
       if(spectator){
         if(!spectators.includes(current.user.id)) await db.execute(sql`UPDATE game_rooms SET spectator_user_ids=array_append(spectator_user_ids,${current.user.id}),updated_at=now() WHERE id=${roomId}`);
         return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:room.status,role:"SPECTATOR",state:room.state||{}}});
+      }
+      const isLudo=room.game_key==="Ludo After Work";
+      if(isLudo){
+        if(players.includes(current.user.id))return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:room.status,role:players[0]===current.user.id?"HOST":"GUEST",state:room.state||{},players:await roomPlayers(db,room)}});
+        if(players.length>=4)return NextResponse.json({error:"This Ludo room already has 4 players."},{status:409});
+        const joined=await db.execute(sql`UPDATE game_rooms SET player_user_ids=array_append(player_user_ids,${current.user.id}),guest_user_id=CASE WHEN guest_user_id IS NULL THEN ${current.user.id} ELSE guest_user_id END,status='ACTIVE',updated_at=now() WHERE id=${roomId} AND array_length(player_user_ids,1)<4`);
+        if(!Number((joined as any).rowCount||0))return NextResponse.json({error:"Ludo room is full."},{status:409});
+        const latest=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,player_user_ids,state,status FROM game_rooms WHERE id=${roomId} LIMIT 1`);
+        const lr=(latest as any).rows?.[0];
+        const ids=Array.isArray(lr?.player_user_ids)?lr.player_user_ids:[];
+        const role=ids[0]===current.user.id?"HOST":"GUEST";
+        return NextResponse.json({room:{id:lr.id,gameKey:lr.game_key,status:lr.status,role,state:lr.state||{},players:await roomPlayers(db,lr)}});
       }
       if(room.guest_user_id && room.guest_user_id!==current.user.id)return NextResponse.json({error:"Room is full."},{status:409});
       const joined=await db.execute(sql`UPDATE game_rooms SET guest_user_id=${current.user.id},status='ACTIVE',updated_at=now() WHERE id=${roomId} AND guest_user_id IS NULL AND status='OPEN'`);
@@ -56,10 +81,10 @@ export async function POST(request:Request){
       if(!joinedCount){
         const latest=await db.execute(sql`SELECT guest_user_id,status,state,game_key FROM game_rooms WHERE id=${roomId} LIMIT 1`);
         const currentRoom=(latest as any).rows?.[0];
-        if(currentRoom?.guest_user_id===current.user.id)return NextResponse.json({room:{id:roomId,gameKey:currentRoom.game_key,status:currentRoom.status,role:"GUEST",state:currentRoom.state||{}}});
+        if(currentRoom?.guest_user_id===current.user.id)return NextResponse.json({room:{id:roomId,gameKey:currentRoom.game_key,status:currentRoom.status,role:"GUEST",state:currentRoom.state||{},players:await roomPlayers(db,currentRoom)}});
         return NextResponse.json({error:"Room is no longer available."},{status:409});
       }
-      return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:"ACTIVE",role:"GUEST",state:room.state||{}}});
+      return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:"ACTIVE",role:"GUEST",state:room.state||{},players:await roomPlayers(db,room)}});
     }
 
     if(action==="reaction"){
@@ -75,10 +100,10 @@ export async function POST(request:Request){
 
     if(action==="state"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
-      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,state,status,updated_at FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
+      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,player_user_ids,state,status,updated_at FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
       const room=(rows as any).rows?.[0];
       if(!room)return NextResponse.json({error:"Room not found."},{status:404});
-      return NextResponse.json({room});
+      return NextResponse.json({room:{...room,players:await roomPlayers(db,room)}});
     }
 
     if(action==="update"){
