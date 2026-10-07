@@ -1209,9 +1209,9 @@ export default function Home() {
           </header>
 
           {roomOpen.type==="Game" && <div className="experience-players">
-            <div className={"experience-player "+(roomOpen.role==="HOST"?"is-you":"")}><div className="experience-avatar">{roomOpen.role==="GUEST"?"O":"S"}</div><div><b>{roomOpen.role==="GUEST"?"Opponent":"You"}</b><span>{roomOpen.role==="GUEST"?"Player O":"Player X"}</span></div></div>
-            <div className="experience-vs">VS</div>
-            <div className={"experience-player "+(roomOpen.role==="GUEST"?"is-you":"")}><div className="experience-avatar alt">{roomOpen.role==="GUEST"?"S":roomOpen.status==="ACTIVE"?"O":"?"}</div><div><b>{roomOpen.role==="GUEST"?"You":roomOpen.status==="ACTIVE"?"Opponent":"Waiting..."}</b><span>{roomOpen.status==="ACTIVE"?"Live player":"Join to play"}</span></div></div>
+            {(roomOpen.players||[]).slice(0,roomOpen.name==="Ludo After Work"?4:2).map((p:any,i:number)=><div key={p.userId||i} className={"experience-player "+(String(p.userId)===String(user?.user?.id)?"is-you":"")}><div className={"experience-avatar "+(i%2?"alt":"")}>{p.avatarUrl?<img src={p.avatarUrl} alt=""/>:p.initial||"P"}</div><div><b>{String(p.userId)===String(user?.user?.id)?"You":p.displayName||"Player "+(i+1)}</b><span>{roomOpen.name==="Ludo After Work"?"Player "+(i+1):i===0?"Player X":"Player O"}</span></div></div>)}
+            {(!roomOpen.players||roomOpen.players.length<2) && <div className="experience-player waiting-player"><div className="experience-avatar alt">?</div><div><b>Waiting...</b><span>Join to play</span></div></div>}
+            {roomOpen.name!=="Ludo After Work" && <div className="experience-vs">VS</div>}
             {roomOpen.role==="SPECTATOR" && <div className="live-pill">● LIVE · Spectating</div>}
           </div>}
 
