@@ -457,3 +457,16 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
  .profile-tinder-card .actions{display:grid;grid-template-columns:1fr 1fr}
  .profile-tinder-card .actions .btn{width:100%;min-width:0}
 }
+
+
+/* Refined navigation icon system */
+.app-icon{display:block;flex:0 0 auto}
+.top-action-icon{display:inline-flex;align-items:center;justify-content:center}
+.top-action-icon .app-icon{stroke-width:1.75}
+.nav button{gap:5px!important}
+.nav-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.nav-icon .app-icon{width:23px;height:23px;transition:transform .18s ease,stroke-width .18s ease}
+.nav button.active .nav-icon .app-icon{transform:scale(1.08);stroke-width:2.15}
+.nav-label{font-size:12px;font-weight:600;letter-spacing:.1px}
+.top-action-link,.top-profile-link,.heart-icon-btn{transition:transform .18s ease,background .18s ease}
+.top-action-link:active,.top-profile-link:active,.heart-icon-btn:active{transform:scale(.94)}
