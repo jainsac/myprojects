@@ -80,6 +80,17 @@ const music = [
   ["🎧", "Listen Together — Indie", "18/30 · listening"],
 ];
 
+const LUDO_TRACK = (() => {
+  const a:[number,number][]=[];
+  const n=15, min=140, max=460, step=(max-min)/(n-1);
+  for(let i=1;i<n-1;i++) a.push([min+i*step,min]);
+  for(let i=1;i<n-1;i++) a.push([max,min+i*step]);
+  for(let i=n-2;i>0;i--) a.push([min+i*step,max]);
+  for(let i=n-2;i>0;i--) a.push([min,max-i*step]);
+  return a;
+})();
+const LUDO_COLORS=["#e95d72","#5b82d8","#55a67a","#a57ad8"];
+
 export default function Home() {
   const [tab, setTab] = useState<Tab>("discover");
   const [index, setIndex] = useState(0);
@@ -193,8 +204,9 @@ export default function Home() {
   const premiumPrompts = ["Choose your answer and compare with your partner.","Ask your partner the same question and reveal together.","Pick one: adventure, comfort, humour or ambition.","Describe your ideal shared weekend in one sentence.","Name one thing that would make a date unforgettable.","Choose the next move together."];
   function startPremiumRound(){setExperienceRound(r=>r+1);setExperienceChoice("");setGamePrompt(premiumPrompts[(experienceRound-1)%premiumPrompts.length]);}
   function answerPremiumRound(){if(roomOpen?.role==="SPECTATOR")return;setExperienceChoice("answered");setExperienceScore(s=>s+1);notify("Point recorded ✦");}
-  const [gameLudoPositions, setGameLudoPositions] = useState<number[]>([0,0,0,0]);
+  const [gameLudoPositions, setGameLudoPositions] = useState<number[][]>([[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]]);
   const [ludoTurn, setLudoTurn] = useState(0);
+  const [ludoPendingRoll, setLudoPendingRoll] = useState(0);
   const [memoryCards, setMemoryCards] = useState<string[]>([]);
   const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
   const [memoryMatched, setMemoryMatched] = useState<number[]>([]);
@@ -242,12 +254,12 @@ export default function Home() {
   async function updateGameRoom(state:any){if(!roomOpen?.roomId || roomOpen.role==="SPECTATOR")return;await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",roomId:roomOpen.roomId,state})}).catch(()=>{})}
   async function closeGameRoom(){if(roomOpen?.roomId)await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"leave",roomId:roomOpen.roomId})}).catch(()=>{});setRoomOpen(null);setAvailableRooms([])}
   useEffect(()=>{if(!roomOpen?.roomId)return;let live=true;const sync=async()=>{try{const r=await fetch("/api/game-rooms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"state",roomId:roomOpen.roomId})});const d=await r.json();if(!live||!r.ok||!d.room)return;setRoomOpen((x:any)=>({...x,status:d.room.status,guestUserId:d.room.guest_user_id,state:d.room.state||{},players:d.room.players||x.players||[]}));const s=d.room.state||{};if(s.game==="Tic-Tac-Toe"&&Array.isArray(s.cells)){setGameCells(s.cells);setGameTurn(s.turn==="O"?"O":"X")}
-        if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p=Array.from({length:4},(_,i)=>Number(s.positions[i]||0));setGameLudoPositions(p);setLudoTurn(Number(s.turn||0));const slot=(roomOpen?.players||[]).findIndex((x:any)=>String(x.userId)===String(user?.user?.id));setGameDicePos(p[slot>=0?slot:0]||0);setGameDice(Number(s.lastRoll||0))}
+        if(s.game==="Ludo After Work"&&Array.isArray(s.positions)){const p=Array.from({length:4},(_,pi)=>Array.from({length:4},(_,ti)=>Number(s.positions?.[pi]?.[ti]??-1)));setGameLudoPositions(p);setLudoTurn(Number(s.turn||0));setGameDice(Number(s.lastRoll||0));}
         if(s.game==="Memory Match"&&Array.isArray(s.matched)){setMemoryMatched(s.matched);if(Array.isArray(s.cards)&&s.cards.length)setMemoryCards(s.cards)}}catch{}};sync();const t=window.setInterval(sync,1500);return()=>{live=false;window.clearInterval(t)}},[roomOpen?.roomId]);
   useEffect(()=>{if(roomOpen?.type==="Game"&&!roomOpen?.roomId)loadGameRooms(roomOpen.name)},[roomOpen?.type,roomOpen?.name,roomOpen?.roomId]);
   function resetGame(){
     setGameTurn("X"); setGameCells(Array(9).fill("")); setGameQuizIndex(0); setGameQuizScore(0);
-    setGameDicePos(0); setGameDice(0); setGameLudoPositions([0,0,0,0]); setLudoTurn(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
+    setGameDicePos(0); setGameDice(0); setGameLudoPositions([[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]]); setLudoTurn(0); setLudoPendingRoll(0); setGameTarget(Math.floor(Math.random()*20)); setGameScore(0);
     setGamePrompt(""); setExperienceRound(1); setExperienceScore(0); setExperienceChoice(""); setMemoryFlipped([]); setMemoryMatched([]); setMemoryCards(["💗","🌙","🎵","☕","💗","🌙","🎵","☕"].sort(()=>Math.random()-.5));
   }
   function playTic(i:number){
@@ -270,12 +282,30 @@ export default function Home() {
     const player=slot>=0?slot:0;
     if(roomOpen?.name==="Ludo After Work" && roomOpen?.roomId && player!==ludoTurn) return notify("Wait for your turn.");
     const n=1+Math.floor(Math.random()*6);
-    const next=[...gameLudoPositions];
-    next[player]=Math.min(56,next[player]+n);
-    const nextTurn=next[player]>=56?player:(player+1)%Math.max(2,Math.min(4,players.length||2));
-    setGameDice(n);setGameDicePos(next[player]);setGameLudoPositions(next);setLudoTurn(nextTurn);
-    if(roomOpen?.roomId) updateGameRoom({game:"Ludo After Work",positions:next,turn:nextTurn,lastRoll:n,winner:next[player]>=56?player:null});
-    if(next[player]>=56) notify("Finish! You won Ludo 🏆");
+    const tokens=gameLudoPositions[player]||[-1,-1,-1,-1];
+    const movable=tokens.some((p:number)=>p>=0 && p+n<=56) || (n===6 && tokens.some((p:number)=>p===-1));
+    setGameDice(n);
+    setLudoPendingRoll(movable?n:0);
+    if(!movable){const nextTurn=(player+1)%Math.max(2,Math.min(4,players.length||2));setLudoTurn(nextTurn);if(roomOpen?.roomId)updateGameRoom({game:"Ludo After Work",positions:gameLudoPositions,turn:nextTurn,lastRoll:n,winner:null});notify("No move available — next player.");return;}
+    if(n===6&&tokens.some((p:number)=>p===-1)) notify("Six! Choose a token to enter the board.");
+  }
+  function moveLudoToken(tokenIndex:number){
+    if(roomOpen?.role==="SPECTATOR")return notify("Spectator mode — cheer and react instead of rolling.");
+    const players=Array.isArray(roomOpen?.players)?roomOpen.players:[];
+    const slot=Math.max(0,players.findIndex((x:any)=>String(x.userId)===String(user?.user?.id)));
+    const player=slot>=0?slot:0;
+    if(player!==ludoTurn||!ludoPendingRoll)return;
+    const current=gameLudoPositions[player]?.[tokenIndex]??-1;
+    if(current===-1 && ludoPendingRoll!==6)return notify("That token needs a 6 to leave home.");
+    if(current>=0 && current+ludoPendingRoll>56)return notify("That token cannot move that far.");
+    const next=gameLudoPositions.map(x=>[...x]);
+    next[player][tokenIndex]=current===-1?0:current+ludoPendingRoll;
+    const finished=next[player].every((p:number)=>p===56);
+    const keepTurn=ludoPendingRoll===6&&!finished;
+    const nextTurn=keepTurn?player:(player+1)%Math.max(2,Math.min(4,players.length||2));
+    setGameLudoPositions(next);setLudoPendingRoll(0);setLudoTurn(nextTurn);
+    if(roomOpen?.roomId)updateGameRoom({game:"Ludo After Work",positions:next,turn:nextTurn,lastRoll:ludoPendingRoll,winner:finished?player:null});
+    if(finished)notify("Ludo complete — you won! 🏆");
   }
   function flipMemory(i:number){
     if(roomOpen?.role==="SPECTATOR") return notify("Spectator mode — cheer and react instead of playing.");
