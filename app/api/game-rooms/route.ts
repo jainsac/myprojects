@@ -22,6 +22,17 @@ async function ensureRooms() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS game_rooms_game_status_idx ON game_rooms(game_key,status,created_at DESC)`);
 }
 
+async function roomPlayers(db:any, room:any){
+  const ids=Array.isArray(room.player_user_ids)&&room.player_user_ids.length
+    ? room.player_user_ids
+    : [room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
+  if(!ids.length)return [];
+  const rows=await db.execute(sql`SELECT p.user_id,p.display_name,p.avatar_url FROM profiles p WHERE p.user_id IN (${sql.join(ids.map((id:string)=>sql`${id}`),sql`,`)})`);
+  const map=new Map<string,any>((rows as any).rows?.map((p:any)=>[String(p.user_id),p])||[]);
+  return ids.map((id:string,i:number)=>{const p=map.get(String(id));const name=p?.display_name||("Player "+(i+1));return {userId:id,displayName:name,avatarUrl:p?.avatar_url||"",initial:name.slice(0,1).toUpperCase(),slot:i};});
+}
+
+
 export async function POST(request:Request){
   const current=await getCurrentUser();
   if(!current)return NextResponse.json({error:"Sign in required."},{status:401});
@@ -39,16 +50,6 @@ export async function POST(request:Request){
       await db.execute(sql`INSERT INTO game_rooms(id,game_key,host_user_id,player_user_ids,state) VALUES(${id},${gameKey},${current.user.id},ARRAY[${current.user.id}]::text[],'{}'::jsonb)`);
       return NextResponse.json({room:{id,gameKey,status:"OPEN",role:"HOST",state:{},players:[{userId:current.user.id,displayName:"You"}]}});
     }
-
-async function roomPlayers(db:any, room:any){
-  const ids=Array.isArray(room.player_user_ids)&&room.player_user_ids.length
-    ? room.player_user_ids
-    : [room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
-  if(!ids.length)return [];
-  const rows=await db.execute(sql`SELECT p.user_id,p.display_name,p.avatar_url FROM profiles p WHERE p.user_id IN (${sql.join(ids.map((id:string)=>sql`${id}`),sql`,`)})`);
-  const map=new Map<string,any>((rows as any).rows?.map((p:any)=>[String(p.user_id),p])||[]);
-  return ids.map((id:string,i:number)=>{const p=map.get(String(id));const name=p?.display_name||("Player "+(i+1));return {userId:id,displayName:name,avatarUrl:p?.avatar_url||"",initial:name.slice(0,1).toUpperCase(),slot:i};});
-}
 
     if(action==="join"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
