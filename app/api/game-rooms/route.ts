@@ -45,7 +45,7 @@ async function roomPlayers(db:any, room:any){
     ? room.player_user_ids
     : [room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
   if(!ids.length)return [];
-  const rows=await db.execute(sql`SELECT p.user_id,p.display_name,p.avatar_url FROM profiles p WHERE p.user_id=ANY(${ids}::text[])`);
+  const rows=await db.execute(sql`SELECT p.user_id,p.display_name,p.avatar_url FROM profiles p WHERE p.user_id IN (${sql.join(ids.map((id:string)=>sql`${id}`),sql`,`)})`);
   const map=new Map<string,any>((rows as any).rows?.map((p:any)=>[String(p.user_id),p])||[]);
   return ids.map((id:string,i:number)=>{const p=map.get(String(id));const name=p?.display_name||("Player "+(i+1));return {userId:id,displayName:name,avatarUrl:p?.avatar_url||"",initial:name.slice(0,1).toUpperCase(),slot:i};});
 }
@@ -61,7 +61,7 @@ async function roomPlayers(db:any, room:any){
       const players=Array.isArray(room.player_user_ids)&&room.player_user_ids.length?room.player_user_ids:[room.host_user_id,...(room.guest_user_id?[room.guest_user_id]:[])].filter(Boolean);
       if(spectator){
         if(!spectators.includes(current.user.id)) await db.execute(sql`UPDATE game_rooms SET spectator_user_ids=array_append(spectator_user_ids,${current.user.id}),updated_at=now() WHERE id=${roomId}`);
-        return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:room.status,role:"SPECTATOR",state:room.state||{}}});
+        return NextResponse.json({room:{id:room.id,gameKey:room.game_key,status:room.status,role:"SPECTATOR",state:room.state||{},players:await roomPlayers(db,room)}});
       }
       const isLudo=room.game_key==="Ludo After Work";
       if(isLudo){
@@ -100,7 +100,7 @@ async function roomPlayers(db:any, room:any){
 
     if(action==="state"){
       if(!roomId)return NextResponse.json({error:"Room is required."},{status:400});
-      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,player_user_ids,state,status,updated_at FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
+      const rows=await db.execute(sql`SELECT id,game_key,host_user_id,guest_user_id,spectator_user_ids,player_user_ids,state,status,updated_at FROM game_rooms WHERE id=${roomId} AND (host_user_id=${current.user.id} OR guest_user_id=${current.user.id} OR ${current.user.id}=ANY(player_user_ids) OR ${current.user.id}=ANY(spectator_user_ids)) LIMIT 1`);
       const room=(rows as any).rows?.[0];
       if(!room)return NextResponse.json({error:"Room not found."},{status:404});
       return NextResponse.json({room:{...room,players:await roomPlayers(db,room)}});
