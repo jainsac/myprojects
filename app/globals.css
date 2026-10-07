@@ -470,3 +470,80 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 .nav-label{font-size:12px;font-weight:600;letter-spacing:.1px}
 .top-action-link,.top-profile-link,.heart-icon-btn{transition:transform .18s ease,background .18s ease}
 .top-action-link:active,.top-profile-link:active,.heart-icon-btn:active{transform:scale(.94)}
+
+
+/* Cuddl experience stage — game/activity first, popup second */
+.experience-overlay{background:rgba(15,15,18,.72);backdrop-filter:blur(10px);z-index:80;padding:18px!important}
+.experience-stage{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;color:#17171a;border-radius:28px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.24)}
+.experience-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid #eee;padding-bottom:16px}
+.experience-title{display:flex;gap:14px;align-items:center;min-width:0}
+.experience-mark{width:54px;height:54px;border-radius:17px;background:#fff3f5;display:grid;place-items:center;font-size:28px;flex:0 0 auto}
+.experience-title h2{margin:2px 0 2px;font-size:25px;line-height:1.1}
+.experience-title p{margin:0;color:#73737a;font-size:14px}
+.experience-close{font-size:28px!important;width:44px!important;height:44px!important}
+.experience-players{display:flex;align-items:center;gap:10px;padding:16px 0}
+.experience-player{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.experience-player>div:last-child{display:flex;flex-direction:column}
+.experience-player span{font-size:12px;color:#777}
+.experience-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#19191d;color:#fff;font-weight:800}
+.experience-avatar.alt{background:#f2d9df;color:#8f3f51}
+.experience-vs{font-size:11px;font-weight:800;color:#999;letter-spacing:.12em}
+.live-pill{font-size:11px;font-weight:800;letter-spacing:.08em;color:#d94e65;background:#fff1f3;border-radius:999px;padding:7px 10px;white-space:nowrap}
+.live-lobby,.waiting-stage,.activity-stage,.game-stage-canvas{margin-top:8px}
+.live-lobby{padding:20px 0;border-top:1px solid #f0f0f0}
+.live-lobby>div:first-child{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.live-lobby>div:first-child span{color:#777;font-size:14px}
+.room-choice-list{display:grid;gap:8px;margin-bottom:12px}
+.room-choice{display:flex;align-items:center;justify-content:space-between;border:1px solid #ececef;background:#fafafa;border-radius:14px;padding:13px 14px;font:inherit;cursor:pointer}
+.waiting-stage{text-align:center;padding:28px 10px 20px;border-top:1px solid #f0f0f0}
+.waiting-orbit{display:flex;justify-content:center;gap:8px;margin-bottom:18px}
+.waiting-orbit span{width:36px;height:36px;border-radius:50%;background:#f5f5f6;display:grid;place-items:center;font-weight:800;color:#777}
+.waiting-stage>b{font-size:19px}.waiting-stage p{max-width:430px;margin:7px auto 16px;color:#777;font-size:14px}
+.stage-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.game-stage-canvas{background:#fafafa;border-radius:22px;padding:16px}
+.game-stage-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:#6f6f75}
+.stage-reactions{margin-left:auto;display:flex;gap:6px}
+.stage-reactions .chip{min-width:40px!important;padding:7px 10px!important}
+.game-showcase{text-align:center;padding:4px 4px 8px}
+.game-status{font-size:14px;color:#6f6f75;margin:4px 0 14px}
+.showcase-board{width:min(330px,100%);margin:0 auto 12px}
+.game-hint{font-size:13px;color:#777;margin:8px auto 14px;max-width:440px}
+.score-duo,.round-head{display:flex;justify-content:space-between;gap:12px;max-width:440px;margin:0 auto 14px;font-size:14px}
+.ludo-board{max-width:430px;margin:auto;display:grid;grid-template-columns:64px 1fr 64px;gap:8px;align-items:center;background:#fff;border-radius:20px;padding:16px}
+.ludo-home{height:64px;border-radius:16px;background:#fcecef;display:grid;place-items:center;font-size:11px;font-weight:800;color:#c94d64}
+.ludo-home.opp{background:#eeeef0;color:#444}
+.ludo-path{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.ludo-path span{aspect-ratio:1;border-radius:50%;background:#ececef;display:grid;place-items:center;font-size:11px}
+.ludo-path span.on{background:#ef6075;color:#fff}
+.dice-display{font-size:27px;margin:13px 0}
+.snake-board{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;max-width:390px;margin:10px auto 15px;background:#fff;padding:10px;border-radius:18px}
+.snake-board .snake-cell,.snake-board .snake-target{aspect-ratio:1;border:0;border-radius:10px;background:#f0f0f2;color:transparent;cursor:pointer}
+.snake-board .snake-target{background:#ef6075;color:#fff}
+.question-stage{background:#fff;border-radius:18px;padding:20px;text-align:left;max-width:540px;margin:auto}
+.question-stage small,.activity-hero small,.activity-prompt small{font-size:10px;font-weight:800;letter-spacing:.13em;color:#e25b70}
+.question-stage h3{font-size:21px;line-height:1.25;margin:8px 0 17px}
+.question-stage p{color:#74747a;margin-top:0}
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.answer-option{min-height:52px;border:1px solid #e9e9eb;background:#fff;border-radius:14px;padding:12px;text-align:left;font:inherit;font-weight:650;cursor:pointer}
+.answer-option:hover{border-color:#e96075}
+.answer-option span{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#f5e9eb;margin-right:8px;font-size:11px}
+.memory-board{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;max-width:370px;margin:auto}
+.showcase-card{aspect-ratio:1;border:0!important;background:#fff!important;border-radius:15px!important;box-shadow:0 2px 10px rgba(0,0,0,.06);font-size:27px}
+.chess-showcase-board{display:grid;grid-template-columns:repeat(8,1fr);width:min(390px,100%);aspect-ratio:1;margin:auto;border-radius:14px;overflow:hidden}
+.chess-showcase-board button{border:0;font-size:clamp(18px,6vw,30px);display:grid;place-items:center}
+.chess-light{background:#f4eee8}.chess-dark{background:#b9a99d}
+.activity-stage{padding:4px 0 8px}
+.activity-people{display:flex;align-items:center;gap:12px;padding:12px 0 18px}
+.people-label{font-size:10px;letter-spacing:.12em;font-weight:800;color:#888}
+.people-stack{display:flex}.people-stack span{width:31px;height:31px;border-radius:50%;background:#f0e7e9;border:2px solid #fff;margin-left:-7px;display:grid;place-items:center;font-size:9px;font-weight:800}.people-stack span:first-child{margin-left:0}
+.activity-people>b{margin-left:auto;font-size:13px}
+.activity-hero{text-align:center;padding:24px 10px 18px}
+.activity-icon-large{font-size:48px;margin-bottom:10px}
+.activity-hero h3{font-size:26px;margin:7px 0}
+.activity-hero p{color:#73737a;margin:0}
+.activity-prompt{max-width:540px;margin:0 auto;background:#fafafa;border-radius:20px;padding:20px}
+.activity-prompt h3{font-size:20px;margin:8px 0}.activity-prompt p{color:#74747a;margin:0}
+.music-stage{text-align:center;padding:34px 10px}.music-art{font-size:64px;margin-bottom:10px}.music-stage h3{font-size:27px;margin:7px 0}.music-stage p{color:#777}
+.music-wave{height:75px;display:flex;align-items:center;justify-content:center;gap:6px;margin:22px auto}.music-wave span{width:5px;border-radius:99px;background:#ed6074;height:30px;animation:cuddl-wave 1s ease-in-out infinite alternate}.music-wave span:nth-child(2){height:48px;animation-delay:.1s}.music-wave span:nth-child(3){height:64px;animation-delay:.2s}.music-wave span:nth-child(4){height:38px;animation-delay:.3s}.music-wave span:nth-child(5){height:58px;animation-delay:.15s}.music-wave span:nth-child(6){height:42px;animation-delay:.25s}.music-wave span:nth-child(7){height:28px;animation-delay:.35s}
+@keyframes cuddl-wave{to{transform:scaleY(.55)}}.experience-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:14px;color:#777;font-size:12px}
+@media(max-width:520px){.experience-overlay{padding:8px!important}.experience-stage{border-radius:22px;padding:17px;max-height:95vh}.experience-title h2{font-size:22px}.experience-players{padding:12px 0}.experience-player span{font-size:11px}.answer-grid{grid-template-columns:1fr}.ludo-board{grid-template-columns:54px 1fr 54px;padding:10px}.game-stage-canvas{padding:11px}.experience-footer{align-items:flex-start}.experience-footer .chip{padding:8px 12px}}
