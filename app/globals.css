@@ -599,3 +599,5 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",san
 .ludo-dice span{font-size:7px;letter-spacing:.08em;color:#999;font-weight:850}.ludo-dice strong{font-size:28px;line-height:1}
 .ludo-turn-copy{display:flex;flex-direction:column}.ludo-turn-copy b{font-size:13px}.ludo-turn-copy small{font-size:10px;color:#888;margin-top:3px}
 @media(max-width:620px){.ludo-player-strip{grid-template-columns:repeat(2,1fr)}.ludo-controls{grid-template-columns:62px 1fr}.ludo-controls .btn{grid-column:1/-1;width:100%}.ludo-board-real{border-radius:22px}}
+
+.experience-avatar{overflow:hidden}.experience-avatar img{width:100%;height:100%;object-fit:cover;display:block}.experience-players{flex-wrap:wrap}.waiting-player{opacity:.7}
