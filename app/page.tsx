@@ -824,7 +824,19 @@ export default function Home() {
     notify("Spark sent 💗");
   }
 
-  const nav = [["discover","♥","Discover"],["lounge","🎮","Lounge"],["matches","◌","Matches"],["dates","✦","Dates"],["bottle","🌊","Bottle"],["profile","☺","Profile"]] as const;
+  const nav = [["discover","heart","Discover"],["lounge","game","Lounge"],["matches","match","Matches"],["dates","spark","Dates"],["bottle","bottle","Bottle"],["profile","profile","Profile"]] as const;
+
+  const AppIcon=({name,size=22}:{name:string;size?:number})=>{
+    const paths:Record<string,string[]>={
+      heart:["M20.8 8.9c0 5.2-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.9A4.7 4.7 0 0 1 12 6.3a4.7 4.7 0 0 1 8.8 2.6Z"],
+      game:["M6.5 8h11a4.5 4.5 0 0 1 4.2 6.1l-1.4 3.6a2.3 2.3 0 0 1-4.1.4L14.7 15H9.3l-1.5 3.1a2.3 2.3 0 0 1-4.1-.4l-1.4-3.6A4.5 4.5 0 0 1 6.5 8Z","M8 11v4","M6 13h4","M16 12h.01","M18 14h.01"],
+      match:["M7 4.5h10A2.5 2.5 0 0 1 19.5 7v10a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 17V7A2.5 2.5 0 0 1 7 4.5Z","M8 9h8","M8 13h5"],
+      spark:["M12 2.8l1.7 5.5 5.5 1.7-5.5 1.7-1.7 5.5-1.7-5.5-5.5-1.7 5.5-1.7Z"],
+      bottle:["M9 3h6","M10 3v5l-4.2 7.1A3.2 3.2 0 0 0 8.5 20h7a3.2 3.2 0 0 0 2.7-4.9L14 8V3","M7.5 14h9"],
+      profile:["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z","M4 21a8 8 0 0 1 16 0"]
+    };
+    return <svg className="app-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{(paths[name]||[]).map((d,i)=>d.includes("M")?<path key={i} d={d}/>:<circle key={i} cx="16" cy="12" r="1" />)}</svg>;
+  };
 
   const myShowcase=Array.isArray(user?.profile?.lifestylePreferences?.profileShowcase)
     ? user.profile.lifestylePreferences.profileShowcase : [];
@@ -859,11 +871,11 @@ export default function Home() {
         <div className="brand">Cuddl</div>
         <div className="topbar-actions">
           <button className="top-action-link" aria-label="Open messages" onClick={()=>{setTab("matches");setChatMatch(null);}}>
-            <span className="top-action-icon">💬</span><span>Messages</span>
+            <span className="top-action-icon"><AppIcon name="match" size={21}/></span><span>Messages</span>
             {notifications.some((n:any)=>!n.read && String(n.title||"").toLowerCase().includes("message"))&&<b className="notification-badge">!</b>}
           </button>
           <button className="top-action-link" aria-label="Open notifications" onClick={()=>setNotificationOpen(true)}>
-            <span className="top-action-icon">🔔</span><span>Alerts</span>
+            <span className="top-action-icon"><AppIcon name="spark" size={21}/></span><span>Alerts</span>
             {notifications.some((n:any)=>!n.read)&&<b className="notification-badge">{notifications.filter((n:any)=>!n.read).length>9?"9+":notifications.filter((n:any)=>!n.read).length}</b>}
           </button>
           <button className="top-profile-link" aria-label="Open profile" onClick={()=>setTab("profile")}>
@@ -1318,7 +1330,7 @@ export default function Home() {
       </div></div>}
       {loginPopup && <div className="overlay popup-overlay"><div className="login-popup"><div className="popup-icon">✦</div><div className="eyebrow">Cuddl update</div><h2>{loginPopup.title}</h2><p className="sub">{loginPopup.body}</p><button className="btn" onClick={()=>closeLoginPopup(loginPopup)}>Continue</button><button className="btn ghost" onClick={()=>{closeLoginPopup(loginPopup);setNotificationOpen(true)}}>View notifications</button></div></div>}
       <nav className="nav" aria-label="Primary">
-        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} if(!profileOnboarding && !["ai_verified","verified","ai_pending"].includes(freeVerificationStatus) && id!=="profile"){setVerificationOpen(true);notify("Complete the AI identity check before continuing");return;} setTab(id);}}><span>{icon}</span>{label}</button>)}
+        {nav.filter(([id])=>id!=="profile").map(([id,icon,label]) => <button key={id} className={tab===id ? "active" : ""} onClick={() => {if(profileOnboarding && id!=="profile"){setProfileModal("edit");notify("Complete your profile before browsing");return;} if(!profileOnboarding && !["ai_verified","verified","ai_pending"].includes(freeVerificationStatus) && id!=="profile"){setVerificationOpen(true);notify("Complete the AI identity check before continuing");return;} setTab(id);}}><span className="nav-icon"><AppIcon name={icon}/></span><span className="nav-label">{label}</span></button>)}
       </nav>
       {toast && <div role="status" style={{position:"fixed",left:"50%",bottom:84,transform:"translateX(-50%)",background:"#282326",color:"#fff",borderRadius:99,padding:"11px 15px",fontSize:12,zIndex:80}}>{toast}</div>}
     </div>
