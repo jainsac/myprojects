@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { eq, or } from "drizzle-orm";
 import { getDb } from "../../../../lib/db";
 import { users, profiles, identityVerifications } from "../../../../lib/db/schema";
@@ -68,7 +69,19 @@ export async function POST(request:Request){
     const rows=await db.select({id:users.id}).from(users).where(eq(users.email,target.email)).limit(1);
     if(!rows[0])return NextResponse.json({error:"Seed test users first."},{status:404});
     await setSession(rows[0].id);
+    (await cookies()).set("cuddl_admin_return",current.user.id,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:60*60});
     return NextResponse.json({ok:true,user:{name:target.name,email:target.email}});
+  }
+
+  if(action==="return"){
+    const returnId=(await cookies()).get("cuddl_admin_return")?.value;
+    if(!returnId)return NextResponse.json({error:"No admin session to return to."},{status:400});
+    const db2=getDb();
+    const adminRows=await db2.select({id:users.id}).from(users).where(eq(users.id,returnId)).limit(1);
+    if(!adminRows[0])return NextResponse.json({error:"Admin session not found."},{status:404});
+    await setSession(adminRows[0].id);
+    (await cookies()).set("cuddl_admin_return","",{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:0});
+    return NextResponse.json({ok:true});
   }
 
   return NextResponse.json({error:"Unsupported action."},{status:400});
