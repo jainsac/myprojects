@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { eq, or } from "drizzle-orm";
 import { getDb } from "../../../../lib/db";
 import { users, profiles, identityVerifications } from "../../../../lib/db/schema";
-import { getCurrentUser, isAdmin, setSession } from "../../../../lib/auth";
+import { getCurrentUser, isAdmin, setSession, createTestSessionToken } from "../../../../lib/auth";
 
 const TEST_USERS=[
   {key:"sachin",name:"Sachin Test",email:"cuddl.test.sachin@cuddl.local",phone:"+919900000101"},
@@ -71,6 +71,16 @@ export async function POST(request:Request){
     await setSession(rows[0].id);
     (await cookies()).set("cuddl_admin_return",current.user.id,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:60*60});
     return NextResponse.json({ok:true,user:{name:target.name,email:target.email}});
+  }
+
+  if(action==="launch"){
+    const email=String(body?.email||"").toLowerCase();
+    const target=TEST_USERS.find(x=>x.email===email);
+    if(!target)return NextResponse.json({error:"Unknown test user."},{status:400});
+    const rows=await db.select({id:users.id}).from(users).where(eq(users.email,target.email)).limit(1);
+    if(!rows[0])return NextResponse.json({error:"Seed test users first."},{status:404});
+    const token=createTestSessionToken(rows[0].id);
+    return NextResponse.json({ok:true,user:{name:target.name,email:target.email},launchUrl:"/api/test-session?token="+encodeURIComponent(token)});
   }
 
   if(action==="return"){
