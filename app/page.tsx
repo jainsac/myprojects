@@ -180,6 +180,12 @@ export default function Home() {
   const [photoIndexes, setPhotoIndexes] = useState<Record<string,number>>({});
   const [profileMenuOpen,setProfileMenuOpen]=useState(false);
   const [profileFilterOpen,setProfileFilterOpen]=useState(false);
+  const [testLabOpen,setTestLabOpen]=useState(false);
+  const [testLabUsers,setTestLabUsers]=useState<any[]>([]);
+  const [testLabBusy,setTestLabBusy]=useState(false);
+  async function openTestLab(){setTestLabOpen(true);setTestLabBusy(true);try{const r=await fetch("/api/admin/test-users",{cache:"no-store"});const d=await r.json();if(r.ok)setTestLabUsers(d.users||[]);else notify(d.error||"Admin access required.");}finally{setTestLabBusy(false)}}
+  async function seedTestUsers(){setTestLabBusy(true);try{const r=await fetch("/api/admin/test-users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"seed"})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not create test users.");notify(d.created?.length?d.created.length+" test users created":"Test users already exist.");const g=await fetch("/api/admin/test-users",{cache:"no-store"});const gd=await g.json();setTestLabUsers(gd.users||[]);}catch(e){notify(e instanceof Error?e.message:"Could not create test users");}finally{setTestLabBusy(false)}}
+  async function switchTestUser(email:string){setTestLabBusy(true);try{const r=await fetch("/api/admin/test-users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"switch",email})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not switch user.");window.location.reload();}catch(e){notify(e instanceof Error?e.message:"Could not switch user");setTestLabBusy(false)}}
   const photoTouchStart=useRef<{id:string;x:number}|null>(null);
 
   const [showcaseRecording, setShowcaseRecording] = useState<"voice"|"video"|null>(null);
@@ -1174,12 +1180,22 @@ export default function Home() {
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);setProfileModal("privacy")}}><span>🛡️<b>Privacy</b><small>Control how your information is used</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openReferral()}}><span>🎁<b>Refer & earn</b><small>Referral code, sharing and rewards</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openLegal("/plans")}}><span>💎<b>Plans & Premium</b><small>Plans, pricing and offers</small></span><strong>›</strong></button>
+          {user?.user?.isAdmin && <button className="menu-row" onClick={()=>{setProfileMenuOpen(false);openTestLab()}}><span>🧪<b>Multiplayer Test Lab</b><small>Create and switch internal test players</small></span><strong>›</strong></button>}
           <div className="menu-divider"/>
           <button className="menu-row" onClick={()=>window.location.href="/help"}><span>❓<b>Help & Feedback</b><small>Get help or tell us what to improve</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>openLegal("/privacy")}><span>📄<b>Privacy Policy</b><small>How Cuddl handles personal information</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>openLegal("/terms")}><span>📜<b>Terms & Conditions</b><small>Rules for using Cuddl</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>openLegal("/disclaimer")}><span>⚖️<b>Disclaimer</b><small>Important product and safety information</small></span><strong>›</strong></button>
           <button className="menu-row" onClick={()=>openLegal("/legal-resolution")}><span>🧾<b>Legal resolution</b><small>Questions, disputes and resolutions</small></span><strong>›</strong></button>
+        </div>
+      </div>}
+      {testLabOpen && <div className="overlay popup-overlay" onClick={()=>setTestLabOpen(false)}>
+        <div className="login-popup test-lab-popup" onClick={e=>e.stopPropagation()}>
+          <div className="eyebrow">Internal testing</div><h2>🧪 Multiplayer Test Lab</h2>
+          <p className="sub">Create five isolated Cuddl test profiles and switch between them without publishing the app. Use separate browser tabs or devices to simulate simultaneous players.</p>
+          <button className="btn" disabled={testLabBusy} onClick={seedTestUsers}>{testLabBusy?"Working…":"Create / refresh test players"}</button>
+          <div className="test-user-list">{testLabUsers.map((x:any)=><div className="test-user-row" key={x.email}><div><b>{x.name}</b><small>{x.email}</small></div><button className="btn ghost" disabled={testLabBusy} onClick={()=>switchTestUser(x.email)}>Switch</button></div>)}</div>
+          <button className="btn ghost" onClick={()=>setTestLabOpen(false)}>Close</button>
         </div>
       </div>}
       {referralOpen && <div className="overlay popup-overlay"><div className="login-popup">
